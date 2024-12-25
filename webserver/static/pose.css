@@ -1,0 +1,236 @@
+:root {
+    --front-right: 0;
+    --front-left: 0;
+    --back-right: 0;
+    --back-left: 0;
+    --left-speed: 20px;
+    --right-speed: 20px;
+    --wheel-color: hsl(120, 100%, 50%);
+    --angle-FL: 0deg;
+    --angle-FR: 0deg;
+    --angle-BL: 0deg;
+    --angle-BR: 0deg;
+    --joint1: 0deg;
+    --joint2: 0deg;
+    --joint0: 0deg;
+}
+
+.container {
+    perspective: 1000px;
+}
+
+.color-wheel {
+    color: var(--wheel-color);
+}
+
+.wheel {
+    position: relative;
+    width: 25px;
+    height: 50px;
+    background-color: var(--wheel-color);
+    overflow: hidden;
+}
+
+.right-align {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-end;
+    text-align: right;
+}
+
+.bottom-align {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: flex-end;
+    text-align: end;
+}
+
+.center-align {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.left-align {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    text-align: start;
+}
+
+.top-align {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: flex-start;
+    text-align: top;
+}
+
+.bottom-align {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: flex-end;
+    text-align: end;
+}
+
+.wheel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: linear-gradient(black 10px, transparent 10px);
+    background-size: 100% 20px;
+}
+
+.wheel#FL::before {
+    animation: move-L 0.25s linear infinite;
+}
+.wheel#FR::before {
+    animation: move-R 0.25s linear infinite;
+}
+.wheel#BL::before {
+    animation: move-L 0.25s linear infinite;
+}
+.wheel#BR::before {
+    animation: move-R 0.25s linear infinite;
+}
+.wheel#ML::before {
+    animation: move-L 0.25s linear infinite;
+}
+.wheel#MR::before {
+    animation: move-R 0.25s linear infinite;
+}
+.wheel#FL {
+    transform: rotate(var(--angle-FL));
+}
+.wheel#FR {
+    transform: rotate(var(--angle-FR));
+    /* margin-left: -135%; */
+}
+.wheel#BL {
+    transform: rotate(var(--angle-BL));
+}
+.wheel#BR {
+    transform: rotate(var(--angle-BR));
+    /* margin-left: -135%; */
+}
+/* .wheel#MR {
+    margin-left: -135%;
+} */
+@keyframes move-L {
+    from {
+        transform: translateY(0);
+    }
+    to {
+        transform: translateY(var(--left-speed));
+        /* transform: translateY(20px); */
+    }
+}
+
+@keyframes move-R {
+    from {
+        transform: translateY(0);
+    }
+    to {
+        transform: translateY(var(--right-speed));
+    }
+}
+
+.space {
+    height: 10px;
+    width: 1px;
+}
+
+.main-frame {
+    position: relative;
+    width: 100px;
+    height: 150px;
+    background: grey;
+    /* margin-left: -90%; */
+    margin-top: 6%;
+}
+
+.base {
+    width: 50px;
+    height: 25px;
+    background: green;
+    transform: rotateY(var(--joint0));
+}
+
+.arm_segment {
+    width: 15px;
+    height: 150px;
+    background: green;
+    transform-origin: bottom;
+    position: relative;
+}
+
+.arm_segment#segment1{
+    transform: rotate(var(--joint1));
+    margin-top: -275%;
+}
+
+.arm_segment#segment2{
+    position: absolute;
+    transform: rotate(var(--joint2));
+    margin-top: -1000%;
+}
+
+.camera {
+    width: 10px;
+    height: 20px;
+    background: rgb(40, 40, 40);   
+    margin-top: 300%;
+    margin-left: 100%;
+}
+
+.left-angle-top {
+    margin-left: 1500%;
+    margin-top: -7000%;
+    z-index: 10;
+}
+
+.right-angle-top {
+    margin-left: -2250%;
+    margin-top: -6500%;
+    z-index: 10;
+}
+
+.left-angle-bottom {
+    margin-left: 1500%;
+    margin-top: 5000%;
+    z-index: 10;
+}
+
+.right-angle-bottom {
+    margin-left: -2250%;
+    margin-top: 5500%;
+    z-index: 10;
+}
+
+.smaller {
+    font-size: 50%;
+}
+
+.angle-text {
+    rotate: calc(var(--joint1) * -1);
+    z-index: 10;
+}
+
+.angle-text#angle1 {
+    margin-top: 850%;
+}
+
+.angle-text#angle0 {
+    rotate: 0deg;
+    margin-bottom: -25%;
+    margin-right: -25%;
+}
