@@ -15,29 +15,35 @@ document.addEventListener("DOMContentLoaded", function() {
         socket.emit('command',  {"type": "joyStick", "info": {"x": stickData.x, "": stickData.y}});
     });
 
-    socket.on('status_update', function(data) {
+    socket.on('drive_state', function(data) {
         const maxVelocity = 3; // unknown unit
         const minVelocity = -3; // unknown unit
-        document.documentElement.style.setProperty('--left-speed', `${Math.round(data.speed_left*(-100/maxVelocity))}px`);
-        document.documentElement.style.setProperty('--right-speed', `${Math.round(data.speed_right*(100/maxVelocity))}px`);
-        document.getElementById('left-speeds').textContent = Math.round(data.speed_left*(100/maxVelocity));
-        document.getElementById('right-speeds').textContent = Math.round(data.speed_right*(-100/maxVelocity));
-        document.documentElement.style.setProperty('--angle-FL', `${data.angleLfront}deg`);
-        document.documentElement.style.setProperty('--angle-FR', `${data.angleRfront}deg`);
-        document.documentElement.style.setProperty('--angle-BL', `${data.angleLback}deg`);
-        document.documentElement.style.setProperty('--angle-BR', `${data.angleRback}deg`);
-        color_wheel = ((maxVelocity - Math.abs(data.speed_left))/maxVelocity)*120;
+
+        console.log(data);
+        
+        document.documentElement.style.setProperty('--left-speed', `${Math.round(data.left_front*(-100/maxVelocity))}px`);
+        document.documentElement.style.setProperty('--right-speed', `${Math.round(data.right_front*(100/maxVelocity))}px`);
+        document.getElementById('left-speeds').textContent = Math.round(data.left_front*(100/maxVelocity));
+        document.getElementById('right-speeds').textContent = Math.round(data.right_front*(-100/maxVelocity));
+
+
+        color_wheel = ((maxVelocity - Math.abs(data.left_front))/maxVelocity)*120;
         document.documentElement.style.setProperty('--wheel-color', `hsl(${color_wheel}, 100%, 50%)`);
-        document.documentElement.style.setProperty('--joint1', `${data.joint1}deg`);
-        document.documentElement.style.setProperty('--joint2', `${data.joint2}deg`);
-        document.documentElement.style.setProperty('--joint0', `${data.joint0}deg`);
-        document.getElementById('FL-angle').textContent = data.angleLfront;
-        document.getElementById('FR-angle').textContent = data.angleRfront;
-        document.getElementById('BL-angle').textContent = data.angleLback;
-        document.getElementById('BR-angle').textContent = data.angleRback;
-        document.getElementById('angle-1').textContent = data.joint1;
-        document.getElementById('angle-2').textContent = data.joint2;
-        document.getElementById('angle-0').textContent = data.joint0;
+    
+        // document.documentElement.style.setProperty('--angle-FL', `${data.angleLfront}deg`);
+        // document.documentElement.style.setProperty('--angle-FR', `${data.angleRfront}deg`);
+        // document.documentElement.style.setProperty('--angle-BL', `${data.angleLback}deg`);
+        // document.documentElement.style.setProperty('--angle-BR', `${data.angleRback}deg`);
+        // document.documentElement.style.setProperty('--joint1', `${data.joint1}deg`);
+        // document.documentElement.style.setProperty('--joint2', `${data.joint2}deg`);
+        // document.documentElement.style.setProperty('--joint0', `${data.joint0}deg`);
+        // document.getElementById('FL-angle').textContent = data.angleLfront;
+        // document.getElementById('FR-angle').textContent = data.angleRfront;
+        // document.getElementById('BL-angle').textContent = data.angleLback;
+        // document.getElementById('BR-angle').textContent = data.angleRback;
+        // document.getElementById('angle-1').textContent = data.joint1;
+        // document.getElementById('angle-2').textContent = data.joint2;
+        // document.getElementById('angle-0').textContent = data.joint0;
     });
 
     socket.on('disconnect', function() {

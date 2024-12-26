@@ -8,35 +8,28 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import robot_sensors as sensors
 import threading
-from web_publishers.joystick_publisher import JoystickPublisher
+from ros_controller.ros_controller import ROSController
 # import time
 
-data_sensors = None
 
-def make_sensors():
-    print("make_sensors called")
-    global data_sensors
-    data_sensors = sensors.robot_data.RobotSensors()
-    print("Data sensors should be init'ed")
-    data_sensors.spin()
                
 def create_app():
-    global data_sensors
 
     app = Flask(__name__)
     app.config['SECRET_KEY'] = 'your_secret_key'
-
-    
-
     api = Api(app)
-    
-    data_thread = threading.Thread(target=make_sensors)
-    data_thread.start()
-
-    # ROS2 Node setup
-    joystick_publisher = JoystickPublisher()
-    
+ 
     socketio = SocketIO(app)  # Allow all origins
+
+    # Initialize ROS controller
+    ros_controller = ROSController()
+
+    # Start ROS publisher and subscriber nodes
+    #ros_controller.start_publisher_nodes()
+    ros_controller.start_subscriber_nodes()
+     # Spin ROS nodes in a separate thread to avoid blocking Flask
+    ros_thread = threading.Thread(target=ros_controller.spin_nodes, daemon=True)
+    ros_thread.start()
 
     # Define routes
     @app.route("/")
@@ -58,20 +51,21 @@ def create_app():
 
     # Emit frequent status updates (e.g., pan/tilt angles)
     def emmiter():
-        global data_sensors
         while True:
             try:
-                velocity = data_sensors.drive_state.get_velocity()
-                print(f"Velocity: {velocity}")
-                socketio.emit('status_update', {"speed_left": velocity[0], "speed_right": velocity[3], 
-                                                "angleLfront": other_files.angleLfront, "angleRfront": other_files.angleRfront,
-                                                "angleLback": other_files.angleLback, "angleRback": other_files.angleRback,
-                                                "joint1": other_files.joint1, "joint2": other_files.joint2, 
-                                                "joint0": other_files.joint0})
+                # Retrieve the latest drive_state data as-is
+                drive_state_data = ros_controller.get_node("drive_state_subscriber").drive_state.get_fronts()
+
+                # Emit the JSON data directly via Socket.IO
+                if drive_state_data:
+                    #print(f"Drive State Data: {drive_state_data}")  # Log to console
+                    socketio.emit('drive_state', {"right_front": drive_state_data["right_front"]["velocity"], "left_front": drive_state_data["left_front"]["velocity"]})
+
+                # Add a small delay to prevent high CPU usage
                 socketio.sleep(0.1)
             except Exception as e:
-                # print(f"Error emitting status update: {e}")
-                pass
+                print(f"Error in emmiter: {e}")
+                break  # Stop the loop if a critical error occurs
 
     @socketio.on('connect')
     def handle_connect():
@@ -86,11 +80,16 @@ def create_app():
     def default_error_handler(e):
         print(f'An error occurred: {e}')
 
-    return app, socketio
+    return app, socketio, ros_controller
 
 def start_webserver():
-    app, socketio = create_app()
-    socketio.run(app, host="0.0.0.0", port=4999)
+    app, socketio, ros_controller = create_app()
+    try:
+        socketio.run(app, host='0.0.0.0', port=5000)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        ros_controller.shutdown()
 
 if __name__ == "__main__":
     start_webserver()

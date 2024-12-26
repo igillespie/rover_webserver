@@ -7,7 +7,6 @@ class RobotSensors:
     """
     def __init__(self):
         print("Beginning Init")
-        rclpy.init()  # Initialize the ROS 2 client library
         self.drive_state = DriveState()
         self.drive_state_subscriber = DriveStateSubscriber(self.drive_state)
 
@@ -29,7 +28,3 @@ class RobotSensors:
         """
         self.drive_state_subscriber.destroy_node()
         rclpy.shutdown()
-
-if __name__ == '__main__':
-    robot_sensors = RobotSensors()
-    robot_sensors.spin()

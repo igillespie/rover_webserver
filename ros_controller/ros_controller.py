@@ -1,5 +1,6 @@
 import rclpy
 from web_publishers.joystick_publisher import JoystickPublisher
+from robot_sensors.drive_state import DriveStateSubscriber
 
 class ROSController:
     def __init__(self):
@@ -16,6 +17,8 @@ class ROSController:
 
     def start_subscriber_nodes(self):
         """Start all subscriber nodes."""
+        drive_state_subscriber = DriveStateSubscriber()
+        self.nodes["drive_state_subscriber"] = drive_state_subscriber
         # Add additional subscribers here, if needed
         pass
 
