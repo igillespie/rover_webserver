@@ -2,7 +2,6 @@ import rclpy # type: ignore
 from rclpy.node import Node # type: ignore
 from sensor_msgs.msg import JointState  # type: ignore
 
-
 class DriveState:
     """
     A class to subscribe to the /drive_state topic and store its data for later use.
@@ -21,7 +20,10 @@ class DriveState:
 
     def get_velocity(self):
         try:
-            return self._latest_data["velocities"]
+            velocities = {}
+            for wheel in self._latest_data:
+                velocities[wheel["name"]] = wheel["velocity"]
+            return velocities
         except:
             return None
         

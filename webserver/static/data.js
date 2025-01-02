@@ -5,46 +5,137 @@ document.addEventListener("DOMContentLoaded", function() {
         console.log('Connected to server');
     });
 
-    var Joy1 = new JoyStick('joyDiv', {}, function(stickData) {
-        // joy1IinputPosX.value = stickData.xPosition;
-        // joy1InputPosY.value = stickData.yPosition;
-        // joy1Direzione.value = stickData.cardinalDirection;
-        // joy1X.value = stickData.x;
-        // joy1Y.value = stickData.y;
-        console.log(stickData);
-        socket.emit('command',  {"type": "joyStick", "info": {"x": stickData.x, "": stickData.y}});
+    var Joy1 = new JoyStick('joyDiv', {
+        internalFillColor: '#808080', // Dark gray color for the stick
+        internalStrokeColor: '#A9A9A9', // Light gray border for the stick
+        externalStrokeColor: '#D3D3D3',
+    }, function(stickData) {
+
+        //console.log("raw joy data " + JSON.stringify(stickData))
+        let joyX = stickData.x / 100 * -1.0;  // Normalize the x-axis (-1 to 1)
+        let joyY = stickData.y / 100;  // Normalize the y-axis (-1 to 1)
+    
+        // Apply a dead zone to prevent small movements from being registered
+        const DEAD_ZONE = 0.05; // Adjust sensitivity (10% dead zone)
+    
+        joyX = Math.abs(joyX) > DEAD_ZONE ? joyX : 0;
+        joyY = Math.abs(joyY) > DEAD_ZONE ? joyY : 0;
+    
+        //Optionally scale the values to make the joystick less sensitive
+        const SCALE_FACTOR = 0.3; // Reduce to make it LESS sensitive
+        joyX *= SCALE_FACTOR;
+        joyY *= SCALE_FACTOR;
+
+        
+    
+        // Emit the normalized and adjusted joystick data
+        //Don't send while testing, just log
+        //console.log("Processed joystick data: ", { x: joyX, y: joyY });
+        socket.emit('command',  {"type": "joyStick", "info": {"x": joyX, "y": joyY}});
     });
 
-    socket.on('drive_state', function(data) {
+    socket.on('update', function(data) {
+
         const maxVelocity = 3; // unknown unit
-        const minVelocity = -3; // unknown unit
-
-        console.log(data);
-        
+        // const maxAngle = 1 // unknown unit
         document.documentElement.style.setProperty('--left-speed', `${Math.round(data.left_front*(-100/maxVelocity))}px`);
-        document.documentElement.style.setProperty('--right-speed', `${Math.round(data.right_front*(100/maxVelocity))}px`);
+        document.documentElement.style.setProperty('--right-speed', `${Math.round(data.right_front*(-100/maxVelocity))}px`);
         document.getElementById('left-speeds').textContent = Math.round(data.left_front*(100/maxVelocity));
-        document.getElementById('right-speeds').textContent = Math.round(data.right_front*(-100/maxVelocity));
-
-
+        document.getElementById('right-speeds').textContent = Math.round(data.right_front*(100/maxVelocity));
         color_wheel = ((maxVelocity - Math.abs(data.left_front))/maxVelocity)*120;
         document.documentElement.style.setProperty('--wheel-color', `hsl(${color_wheel}, 100%, 50%)`);
+
+        data.angleLfront /= Math.PI;
+        data.angleLfront *= 180;
+        data.angleRfront /= Math.PI;
+        data.angleRfront *= 180;
+        data.angleLback /= Math.PI;
+        data.angleLback *= 180;
+        data.angleRback /= Math.PI;
+        data.angleRback *= 180; 
     
-        // document.documentElement.style.setProperty('--angle-FL', `${data.angleLfront}deg`);
-        // document.documentElement.style.setProperty('--angle-FR', `${data.angleRfront}deg`);
-        // document.documentElement.style.setProperty('--angle-BL', `${data.angleLback}deg`);
-        // document.documentElement.style.setProperty('--angle-BR', `${data.angleRback}deg`);
+        document.documentElement.style.setProperty('--angle-FL', `${data.angleLfront}deg`);
+        document.documentElement.style.setProperty('--angle-FR', `${data.angleRfront}deg`);
+        document.documentElement.style.setProperty('--angle-BL', `${data.angleLback}deg`);
+        document.documentElement.style.setProperty('--angle-BR', `${data.angleRback}deg`);
+        document.getElementById('FL-angle').textContent = Math.round(data.angleLfront);
+        document.getElementById('FR-angle').textContent = Math.round(data.angleRfront);
+        document.getElementById('BL-angle').textContent = Math.round(data.angleLback);
+        document.getElementById('BR-angle').textContent = Math.round(data.angleRback);
+
+
+        updateBatterStatus(data);
+        updateCoreStatus(data);
+
         // document.documentElement.style.setProperty('--joint1', `${data.joint1}deg`);
         // document.documentElement.style.setProperty('--joint2', `${data.joint2}deg`);
         // document.documentElement.style.setProperty('--joint0', `${data.joint0}deg`);
-        // document.getElementById('FL-angle').textContent = data.angleLfront;
-        // document.getElementById('FR-angle').textContent = data.angleRfront;
-        // document.getElementById('BL-angle').textContent = data.angleLback;
-        // document.getElementById('BR-angle').textContent = data.angleRback;
         // document.getElementById('angle-1').textContent = data.joint1;
         // document.getElementById('angle-2').textContent = data.joint2;
         // document.getElementById('angle-0').textContent = data.joint0;
     });
+
+    function updateCoreStatus(data) {
+        if (data.core_status) {
+            // console.log("data " + JSON.stringify(data))
+            let voltage = data.core_status.voltage
+            let cpu_temp = data.core_status.cpu_temp
+
+            let batteryVoltageElement = document.getElementById('core-status-voltage');
+            let cpuElement = document.getElementById('core-status-cpu-temp');
+
+            // Check if the elements exist and update their content
+            if (batteryVoltageElement && cpuElement) {
+                // Ensure the data is valid and update the text content
+                if (typeof voltage === 'number' && !isNaN(voltage)) {
+                    batteryVoltageElement.textContent = `Voltage: ${voltage.toFixed(2)} V`;
+                } else {
+                    batteryVoltageElement.textContent = 'Voltage: --';
+                }
+
+                if (typeof cpu_temp === 'number' && !isNaN(cpu_temp)) {
+                    cpuElement.textContent = `CPU Temp: ${cpu_temp.toFixed(2)}˚`;
+                } else {
+                    cpuElement.textContent = 'CPU Temp: --˚';
+                }
+
+               
+            } else {
+                console.error('Core status elements not found in the DOM.');
+            }  
+        }
+    }
+
+    function updateBatterStatus(data) {
+        if (data.battery_state) {
+            // console.log('Battery State:', data.battery_state);
+            // Example data for voltage and amps
+            let voltage = data.battery_state.voltage; // Voltage in volts
+            let amps = data.battery_state.current;     // Current in amperes
+
+            // Get the HTML elements by their IDs
+            let batteryVoltageElement = document.getElementById('battery-voltage');
+            let batteryAmpsElement = document.getElementById('battery-amps');
+
+            // Check if the elements exist and update their content
+            if (batteryVoltageElement && batteryAmpsElement) {
+                // Ensure the data is valid and update the text content
+                if (typeof voltage === 'number' && !isNaN(voltage)) {
+                    batteryVoltageElement.textContent = `Voltage: ${voltage.toFixed(2)} V`;
+                } else {
+                    batteryVoltageElement.textContent = 'Voltage: --';
+                }
+
+                if (typeof amps === 'number' && !isNaN(amps)) {
+                    batteryAmpsElement.textContent = `Amps: ${amps.toFixed(2)} A`;
+                } else {
+                    batteryAmpsElement.textContent = 'Amps: --';
+                }
+            } else {
+                console.error('Battery elements not found in the DOM.');
+            }   
+        } 
+    }
 
     socket.on('disconnect', function() {
         console.log('Disconnected from server');

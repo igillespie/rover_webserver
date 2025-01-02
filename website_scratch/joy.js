@@ -182,38 +182,38 @@
          touchId = event.targetTouches[0].identifier;
      }
  
-     function onTouchMove(event) {
-        if (pressed === 1 && event.targetTouches[0].target === canvas) {
-            const rect = canvas.getBoundingClientRect();
-            movedX = event.targetTouches[0].clientX - rect.left;
-            movedY = event.targetTouches[0].clientY - rect.top;
-    
-            // Calculate distance from the center
-            const deltaX = movedX - centerX;
-            const deltaY = movedY - centerY;
-            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    
-            // Clamp the movement to the joystick's boundary
-            if (distance > maxMoveStick) {
-                const angle = Math.atan2(deltaY, deltaX);
-                movedX = centerX + maxMoveStick * Math.cos(angle);
-                movedY = centerY + maxMoveStick * Math.sin(angle);
-            }
-    
-            // Clear and redraw the canvas
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            drawExternal();
-            drawInternal();
-    
-            // Update StickStatus
-            StickStatus.xPosition = movedX;
-            StickStatus.yPosition = movedY;
-            StickStatus.x = (100 * ((movedX - centerX) / maxMoveStick)).toFixed();
-            StickStatus.y = ((100 * ((movedY - centerY) / maxMoveStick)) * -1).toFixed();
-            StickStatus.cardinalDirection = getCardinalDirection();
-            callback(StickStatus);
-        }
-    }
+     function onTouchMove(event)
+     {
+         if(pressed === 1 && event.targetTouches[0].target === canvas)
+         {
+             movedX = event.targetTouches[0].pageX;
+             movedY = event.targetTouches[0].pageY;
+             // Manage offset
+             if(canvas.offsetParent.tagName.toUpperCase() === "BODY")
+             {
+                 movedX -= canvas.offsetLeft;
+                 movedY -= canvas.offsetTop;
+             }
+             else
+             {
+                 movedX -= canvas.offsetParent.offsetLeft;
+                 movedY -= canvas.offsetParent.offsetTop;
+             }
+             // Delete canvas
+             context.clearRect(0, 0, canvas.width, canvas.height);
+             // Redraw object
+             drawExternal();
+             drawInternal();
+ 
+             // Set attribute of callback
+             StickStatus.xPosition = movedX;
+             StickStatus.yPosition = movedY;
+             StickStatus.x = (100*((movedX - centerX)/maxMoveStick)).toFixed();
+             StickStatus.y = ((100*((movedY - centerY)/maxMoveStick))*-1).toFixed();
+             StickStatus.cardinalDirection = getCardinalDirection();
+             callback(StickStatus);
+         }
+     }
  
      function onTouchEnd(event)
      {
@@ -250,38 +250,38 @@
      }
  
      /* To simplify this code there was a new experimental feature here: https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/offsetX , but it present only in Mouse case not metod presents in Touch case :-( */
-     function onMouseMove(event) {
-        if (pressed === 1) {
-            const rect = canvas.getBoundingClientRect();
-            movedX = event.clientX - rect.left;
-            movedY = event.clientY - rect.top;
-    
-            // Calculate distance from the center
-            const deltaX = movedX - centerX;
-            const deltaY = movedY - centerY;
-            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    
-            // Clamp the movement to the joystick's boundary
-            if (distance > maxMoveStick) {
-                const angle = Math.atan2(deltaY, deltaX);
-                movedX = centerX + maxMoveStick * Math.cos(angle);
-                movedY = centerY + maxMoveStick * Math.sin(angle);
-            }
-    
-            // Clear and redraw the canvas
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            drawExternal();
-            drawInternal();
-    
-            // Update StickStatus
-            StickStatus.xPosition = movedX;
-            StickStatus.yPosition = movedY;
-            StickStatus.x = (100 * ((movedX - centerX) / maxMoveStick)).toFixed();
-            StickStatus.y = ((100 * ((movedY - centerY) / maxMoveStick)) * -1).toFixed();
-            StickStatus.cardinalDirection = getCardinalDirection();
-            callback(StickStatus);
-        }
-    }
+     function onMouseMove(event) 
+     {
+         if(pressed === 1)
+         {
+             movedX = event.pageX;
+             movedY = event.pageY;
+             // Manage offset
+             if(canvas.offsetParent.tagName.toUpperCase() === "BODY")
+             {
+                 movedX -= canvas.offsetLeft;
+                 movedY -= canvas.offsetTop;
+             }
+             else
+             {
+                 movedX -= canvas.offsetParent.offsetLeft;
+                 movedY -= canvas.offsetParent.offsetTop;
+             }
+             // Delete canvas
+             context.clearRect(0, 0, canvas.width, canvas.height);
+             // Redraw object
+             drawExternal();
+             drawInternal();
+ 
+             // Set attribute of callback
+             StickStatus.xPosition = movedX;
+             StickStatus.yPosition = movedY;
+             StickStatus.x = (100*((movedX - centerX)/maxMoveStick)).toFixed();
+             StickStatus.y = ((100*((movedY - centerY)/maxMoveStick))*-1).toFixed();
+             StickStatus.cardinalDirection = getCardinalDirection();
+             callback(StickStatus);
+         }
+     }
  
      function onMouseUp(event) 
      {

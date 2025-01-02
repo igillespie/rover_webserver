@@ -1,46 +1,79 @@
-import rclpy
+import rclpy # type: ignore
 from web_publishers.joystick_publisher import JoystickPublisher
 from robot_sensors.drive_state import DriveStateSubscriber
+from robot_sensors.corner_state import CornerStateSubscriber
+from robot_sensors.main_camera import MainCameraSubscriber
+from robot_sensors.battery import BatteryStateSubscriber
+from robot_sensors.core_status import CoreStatus
+from rclpy.executors import MultiThreadedExecutor # type: ignore
+import threading
 
 class ROSController:
     def __init__(self):
         """Initialize the ROSController."""
         rclpy.init()
+        self.executor = MultiThreadedExecutor()
         self.nodes = {}
         self.running = False
 
     def start_publisher_nodes(self):
         """Start all publisher nodes."""
-        # Initialize and store the JoystickPublisher
         joystick_publisher = JoystickPublisher()
         self.nodes['joystick_publisher'] = joystick_publisher
+        self.executor.add_node(joystick_publisher)
 
     def start_subscriber_nodes(self):
         """Start all subscriber nodes."""
         drive_state_subscriber = DriveStateSubscriber()
         self.nodes["drive_state_subscriber"] = drive_state_subscriber
-        # Add additional subscribers here, if needed
-        pass
+        self.executor.add_node(drive_state_subscriber)
 
-    def get_node(self, node_name):
-        """Retrieve a managed node by name."""
-        return self.nodes.get(node_name)
+        corner_state_subscriber = CornerStateSubscriber()
+        self.nodes["corner_state_subscriber"] = corner_state_subscriber
+        self.executor.add_node(corner_state_subscriber)
 
-    def spin_nodes(self):
-        """Spin all managed nodes."""
+        main_camera_subscriber = MainCameraSubscriber()
+        self.nodes["main_camera_subscriber"] = main_camera_subscriber
+        self.executor.add_node(main_camera_subscriber)
+
+        battery_state_subscriber = BatteryStateSubscriber()
+        self.nodes["battery_state_subscriber"] = battery_state_subscriber
+        self.executor.add_node(battery_state_subscriber)
+
+        core_status = CoreStatus()
+        self.nodes["core_status"] = core_status
+        self.executor.add_node(core_status)
+       
+        
+
+    def spin_all_nodes(self):
+        """Spin all managed nodes in a separate thread."""
         self.running = True
+        thread = threading.Thread(target=self._spin_executor)
+        thread.start()
+        return thread
+
+    def _spin_executor(self):
+        """Spin the MultiThreadedExecutor."""
         try:
-            for node in self.nodes.values():
-                rclpy.spin(node)
-        except KeyboardInterrupt:
-            pass
+            print("Spinning all nodes using MultiThreadedExecutor")
+            self.executor.spin()
+        except Exception as e:
+            print(f"Error during spinning: {e}")
         finally:
             self.shutdown()
 
+    def get_all_nodes(self):
+        return self.nodes
+        
+    def get_node(self, node_name):
+        return self.nodes.get(node_name)
+
     def shutdown(self):
-        """Cleanly shutdown all nodes and ROS2."""
+        """Cleanly shutdown all nodes and ROS 2."""
         if self.running:
             for node in self.nodes.values():
+                self.executor.remove_node(node)
                 node.destroy_node()
             rclpy.shutdown()
             self.running = False

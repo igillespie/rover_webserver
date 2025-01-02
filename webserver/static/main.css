@@ -1,0 +1,24 @@
+body {
+    background-color: black;
+    color: #fff;
+    font-family: 'Courier New', Courier, monospace;
+}
+.panel {
+    border: 1px solid #666;
+    border-radius: 5px;
+    background-color: #333;
+    padding: 15px;
+}
+.panel-title {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #00ff00;
+    margin-bottom: 10px;
+}
+.panel-content {
+    font-size: 1rem;
+    line-height: 1.5;
+}
+.panel-content span {
+    display: block;
+}

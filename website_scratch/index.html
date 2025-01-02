@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Robot Monitoring and Control Dashboard">
+  <title>Robot Dashboard</title>
+  <!-- Link to Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+  <!-- Link to custom CSS -->
+  <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="pose.css">
+</head>
+<body>
+  <header class="bg-primary text-center py-4">
+    <h1>Robot Monitoring Dashboard</h1>
+  </header>
+  <main class="container mt-4">
+    <struct>
+      <div id="joyDiv" style="width:200px;height:200px;"></div> <!-- margin-bottom:20px; -->
+  </struct>
+    <div class="row mb-4">
+      <!-- First Row -->
+      <div class="col-md-4">
+        <div class="panel">
+          <div class="panel-title">Core Status</div>
+          <div class="panel-content">
+            <span>CPU Temperature: 45°C</span>
+            <span>Voltage: 12V</span>
+            <span>Amps: 3.5A</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="panel">
+          <div class="panel-title">Motors</div>
+          <div class="panel-content">
+            <span>Motor 1: Temp: 40°C, Voltage: 12V</span>
+            <span>Motor 2: Temp: 41°C, Voltage: 12V</span>
+            <span>Motor 3: Temp: 39°C, Voltage: 12V</span>
+            <span>Motor 4: Temp: 42°C, Voltage: 12V</span>
+            <span>Motor 5: Temp: 38°C, Voltage: 12V</span>
+            <span>Motor 6: Temp: 37°C, Voltage: 12V</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="panel">
+          <div class="panel-title">Battery</div>
+          <div class="panel-content">
+            <span>Voltage: 12.6V</span>
+            <span>Capacity: 85%</span>
+            <span>Amps: 2.8A</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <!-- Second Row -->
+      <div class="col-md-4">
+        <div class="panel">
+          <div class="panel-title">Navigation</div>
+          <div class="panel-content">
+            <span>Current Direction: North</span>
+            <span>Target Angle: 45°</span>
+            <span>Speed: 1.2 m/s</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="panel">
+          <div class="panel-title">Sensors</div>
+          <div class="panel-content">
+            <span>Lidar: Distance: 1.2m</span>
+            <span>Camera: Active</span>
+            <span>Bumper: Clear</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="panel">
+          <div class="panel-title">System</div>
+          <div class="panel-content">
+            <span>Uptime: 3h 25m</span>
+            <span>Processes: 120</span>
+            <span>Errors: None</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <footer class="text-center py-3 mt-4" style="color: #666;">
+    <p>&copy; 2024 Robot Control Team. All rights reserved.</p>
+  </footer>
+  <script src="other.js"></script>
+  <script src="joy.js"></script>
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

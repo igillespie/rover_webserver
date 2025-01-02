@@ -11,25 +11,72 @@ import threading
 from ros_controller.ros_controller import ROSController
 # import time
 
+app = Flask(__name__)
 
-               
+ros_controller = None
+lock = threading.Lock()  # Ensure thread-safe access to cached images
+
+@app.route('/video_feed')
+def video_feed():
+    """
+    Flask route to provide an MJPEG stream of the camera frames.
+    """
+    def generate():
+        while True:
+            try:
+                # Access the MainCameraSubscriber node
+                # all = ros_controller.get_all_nodes()
+                # print(f"all nodes {all}")
+                main_camera_node = ros_controller.get_node("main_camera_subscriber")
+                if not main_camera_node:
+                    print("MainCameraSubscriber node not found.")
+                    break
+
+                with lock:
+                    # Get the latest cached image
+                    cached_image = main_camera_node.get_cached_image()
+
+                if cached_image:
+                    # Log the size of the cached image
+                    #print(f"Cached image size: {len(cached_image.data)} bytes")
+                    #print(f"Image timestamp: {cached_image.header.stamp.sec}.{cached_image.header.stamp.nanosec}")
+                    
+                    # Yield the JPEG image as an MJPEG frame
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + cached_image.data + b'\r\n')
+                else:
+                    # Log that no image is available
+                    #print("No cached image available.")
+                    
+                    # Yield a blank frame
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + b'' + b'\r\n')
+            except Exception as e:
+                print(f"Error in video_feed: {e}")
+                break
+
+    print("Starting MJPEG video stream...")
+    response = Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    print("MJPEG video stream started.")
+    return response
+
 def create_app():
 
-    app = Flask(__name__)
+   
     app.config['SECRET_KEY'] = 'your_secret_key'
+    # app.config['DEBUG'] = True
     api = Api(app)
  
     socketio = SocketIO(app)  # Allow all origins
 
     # Initialize ROS controller
+    global ros_controller
     ros_controller = ROSController()
 
     # Start ROS publisher and subscriber nodes
-    #ros_controller.start_publisher_nodes()
+    ros_controller.start_publisher_nodes()
     ros_controller.start_subscriber_nodes()
-     # Spin ROS nodes in a separate thread to avoid blocking Flask
-    ros_thread = threading.Thread(target=ros_controller.spin_nodes, daemon=True)
-    ros_thread.start()
+    ros_controller.spin_all_nodes()
 
     # Define routes
     @app.route("/")
@@ -42,35 +89,90 @@ def create_app():
     @socketio.on('command')
     def handle_command(data):
         try:
-            pass
-            # for command in data:
-            #     func = "other_files." + str(command) + "()"  # Convert the command to a function call
-            #     exec(func)
+            #print(f"data received {data}")
+            
+            if data.get('type') == 'joyStick':
+                info = data.get('info', {})  # Safely get 'info' dictionary
+                x = info.get('x')  # Get 'x' value from 'info'
+                y = info.get('y')  # Get 'y' value from 'info'
+
+                # Ensure joy_node is retrieved
+                joy_node = ros_controller.get_node("joystick_publisher") if ros_controller else None
+
+                if joy_node is not None:
+                    if x is not None and y is not None:  # Proceed if both 'x' and 'y' are present
+                        joy_node.publish_joystick_data(x, y)
+                    else:  # Incomplete data: stop the robot
+                        joy_node.publish_joystick_data(0, 0)
+                        print("Incomplete joystick info received. Publish stop")
+                else:
+                    print("Joystick publisher node is not available.")
+            else:
+                print("Unhandled command type received.")
         except Exception as e:
             print(f"Error handling command: {e}")
 
     # Emit frequent status updates (e.g., pan/tilt angles)
-    def emmiter():
+    def emitter():
         while True:
             try:
                 # Retrieve the latest drive_state data as-is
-                drive_state_data = ros_controller.get_node("drive_state_subscriber").drive_state.get_fronts()
+                drive_state_data = ros_controller.get_node("drive_state_subscriber").drive_state.get_velocity()
+                corner_state_data = ros_controller.get_node("corner_state_subscriber").corner_state
+                battery_state_node = ros_controller.get_node("battery_state_subscriber")
+                core_status_node = ros_controller.get_node("core_status")
+                # Build the data dictionary dynamically
+                data_to_emit = {}
 
-                # Emit the JSON data directly via Socket.IO
                 if drive_state_data:
-                    #print(f"Drive State Data: {drive_state_data}")  # Log to console
-                    socketio.emit('drive_state', {"right_front": drive_state_data["right_front"]["velocity"], "left_front": drive_state_data["left_front"]["velocity"]})
+                    #print(f"drive_state_data {drive_state_data}")
+                    data_to_emit["right_front"] = drive_state_data["drive_right_front"]
+                    data_to_emit["left_front"] = drive_state_data["drive_left_front"]
+
+                if corner_state_data:
+                    data_to_emit.update({
+                        "angleRback": corner_state_data[0]["position"],
+                        "angleRfront": corner_state_data[1]["position"],
+                        "angleLfront": corner_state_data[2]["position"],
+                        "angleLback": corner_state_data[3]["position"]
+                    })
+
+                if battery_state_node:
+                    # Extract battery state data (voltage and current)
+                    battery_state = {
+                        "voltage": battery_state_node.battery_state.get("voltage", None),
+                        "current": battery_state_node.battery_state.get("current", None)
+                    }
+                    data_to_emit["battery_state"] = battery_state
+                else:
+                    print("failed to find battery_state_node")
+
+                if core_status_node:
+                    core_status = {
+                        "voltage": core_status_node.core_status.get("voltage", None),
+                        "cpu_temp": core_status_node.core_status.get("cpu_temperature", None)
+                    }
+                    data_to_emit["core_status"] = core_status
+                    #print(f"core status: {data_to_emit['core_status']}")
+                else:
+                    print("failed to find battery_state_node")
+
+                # Emit only if there's data to send
+                if data_to_emit:
+                    socketio.emit('update', data_to_emit)
 
                 # Add a small delay to prevent high CPU usage
-                socketio.sleep(0.1)
+                
             except Exception as e:
-                print(f"Error in emmiter: {e}")
-                break  # Stop the loop if a critical error occurs
+                print(f"Error emitting data: {e}")
+                pass
+
+        socketio.sleep(0.1)
 
     @socketio.on('connect')
     def handle_connect():
         print("Client connected")
-        socketio.start_background_task(emmiter)
+        socketio.start_background_task(emitter)
 
     @socketio.on('disconnect')
     def handle_disconnect():
