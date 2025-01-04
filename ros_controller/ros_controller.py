@@ -5,6 +5,8 @@ from robot_sensors.corner_state import CornerStateSubscriber
 from robot_sensors.main_camera import MainCameraSubscriber
 from robot_sensors.battery import BatteryStateSubscriber
 from robot_sensors.core_status import CoreStatus
+from robot_sensors.distance import Distance
+
 from rclpy.executors import MultiThreadedExecutor # type: ignore
 import threading
 
@@ -43,6 +45,10 @@ class ROSController:
         core_status = CoreStatus()
         self.nodes["core_status"] = core_status
         self.executor.add_node(core_status)
+
+        distance = Distance()
+        self.nodes["distance"] = distance
+        self.executor.add_node(distance)
        
         
 
@@ -70,10 +76,10 @@ class ROSController:
         return self.nodes.get(node_name)
 
     def shutdown(self):
-        """Cleanly shutdown all nodes and ROS 2."""
-        if self.running:
-            for node in self.nodes.values():
-                self.executor.remove_node(node)
-                node.destroy_node()
-            rclpy.shutdown()
+        """Shut down all nodes and stop spinning."""
+        if rclpy.ok():  # Check if the context is still active
             self.running = False
+            self.executor.shutdown()
+            rclpy.shutdown()
+        else:
+            print("ROS context already shut down.")

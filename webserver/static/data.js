@@ -34,6 +34,11 @@ document.addEventListener("DOMContentLoaded", function() {
         socket.emit('command',  {"type": "joyStick", "info": {"x": joyX, "y": joyY}});
     });
 
+    socket.on('slow_update', function(data) {
+        updateBatterStatus(data);
+        updateCoreStatus(data);
+        updateOdometry(data);
+    });
     socket.on('update', function(data) {
 
         const maxVelocity = 3; // unknown unit
@@ -62,20 +67,10 @@ document.addEventListener("DOMContentLoaded", function() {
         document.getElementById('FR-angle').textContent = Math.round(data.angleRfront);
         document.getElementById('BL-angle').textContent = Math.round(data.angleLback);
         document.getElementById('BR-angle').textContent = Math.round(data.angleRback);
-
-
-        updateBatterStatus(data);
-        updateCoreStatus(data);
-
-        // document.documentElement.style.setProperty('--joint1', `${data.joint1}deg`);
-        // document.documentElement.style.setProperty('--joint2', `${data.joint2}deg`);
-        // document.documentElement.style.setProperty('--joint0', `${data.joint0}deg`);
-        // document.getElementById('angle-1').textContent = data.joint1;
-        // document.getElementById('angle-2').textContent = data.joint2;
-        // document.getElementById('angle-0').textContent = data.joint0;
     });
 
     function updateCoreStatus(data) {
+
         if (data.core_status) {
             // console.log("data " + JSON.stringify(data))
             let voltage = data.core_status.voltage
@@ -130,6 +125,29 @@ document.addEventListener("DOMContentLoaded", function() {
                     batteryAmpsElement.textContent = `Amps: ${amps.toFixed(2)} A`;
                 } else {
                     batteryAmpsElement.textContent = 'Amps: --';
+                }
+            } else {
+                console.error('Battery elements not found in the DOM.');
+            }   
+        } 
+    }
+
+    function updateOdometry(data) {
+        if (data.distance) {
+            // console.log('Battery State:', data.battery_state);
+            // Example data for voltage and amps
+            let distance = data.distance.distance; // Voltage in volts
+
+            // Get the HTML elements by their IDs
+            let odomDistance = document.getElementById('odom-distance');
+
+            // Check if the elements exist and update their content
+            if (odomDistance) {
+                // Ensure the data is valid and update the text content
+                if (typeof distance === 'number' && !isNaN(distance)) {
+                    odomDistance.textContent = `Disance: ${distance.toFixed(2)} M`;
+                } else {
+                    odomDistance.textContent = 'Disance: -- M';
                 }
             } else {
                 console.error('Battery elements not found in the DOM.');

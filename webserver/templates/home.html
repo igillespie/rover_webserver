@@ -15,7 +15,6 @@
         <h1>Scout Control</h1>
         <div class="row">
             <div class="col-8">
-                <h1 style="text-align: center;">Live Camera Feed</h1>
                 <img id="video-feed" src="/video_feed" alt="Main Camera Feed" class="img-fluid">
             </div>
             <div class="col-4">
@@ -39,9 +38,9 @@
             </div>
             <div class="col-md-4">
               <div class="panel">
-                <div class="panel-title">Motors</div>
+                <div class="panel-title">Odometry</div>
                 <div class="panel-content">
-                  
+                    <span id="odom-distance" >Distance: --M</span>
                 </div>
               </div>
             </div>
@@ -57,42 +56,44 @@
           </div>
         
         <div class="row">
+          
+                <div class="col-1 right-align">
+                    <div class="wheel" id="FL"></div>
+                    <div class="space">
+                        <div class="left-angle-top">
+                            <p class="smaller"><span id="FL-angle">-</span>˚</p>
+                        </div>
+                    </div>
+                    <div class="wheel" id="ML"></div>
+                    <div class="space">
+                        <div class="left-angle-bottom">
+                            <p class="smaller"><span id="BL-angle">-</span>˚</p>
+                        </div>
+                    </div>
+                    <div class="wheel" id="BL"></div>
+                    <p class="color-wheel"><span id="left-speeds">-</span>%</p>
+                </div>
+                <div class="col-1 center-align top-align">
+                    <div class="main-frame"></div>
+                </div>
+                <div class="col-1 flex-container left-align">
+                    <div class="wheel" id="FR"></div>
+                    <div class="space">
+                        <div class="right-angle-top">
+                            <p class="smaller"><span id="FR-angle">-</span>˚</p>
+                        </div>
+                    </div>
+                    <div class="wheel" id="MR"></div>
+                    <div class="space">
+                        <div class="right-angle-bottom">
+                            <p class="smaller"><span id="BR-angle">-</span>˚</p>
+                        </div>
+                    </div>
+                    <div class="wheel" id="BR"></div>
+                    <p class="color-wheel"><span id="right-speeds">-</span>%</p>
+                </div>
+            </div>
             
-            <div class="col-1 right-align">
-                <div class="wheel" id="FL"></div>
-                <div class="space">
-                    <div class="left-angle-top">
-                        <p class="smaller"><span id="FL-angle">-</span>˚</p>
-                    </div>
-                </div>
-                <div class="wheel" id="ML"></div>
-                <div class="space">
-                    <div class="left-angle-bottom">
-                        <p class="smaller"><span id="BL-angle">-</span>˚</p>
-                    </div>
-                </div>
-                <div class="wheel" id="BL"></div>
-                <p class="color-wheel"><span id="left-speeds">-</span>%</p>
-            </div>
-            <div class="col-1 center-align top-align">
-                <div class="main-frame"></div>
-            </div>
-            <div class="col-1 flex-container left-align">
-                <div class="wheel" id="FR"></div>
-                <div class="space">
-                    <div class="right-angle-top">
-                        <p class="smaller"><span id="FR-angle">-</span>˚</p>
-                    </div>
-                </div>
-                <div class="wheel" id="MR"></div>
-                <div class="space">
-                    <div class="right-angle-bottom">
-                        <p class="smaller"><span id="BR-angle">-</span>˚</p>
-                    </div>
-                </div>
-                <div class="wheel" id="BR"></div>
-                <p class="color-wheel"><span id="right-speeds">-</span>%</p>
-            </div>
             <!-- <div class="col-2 bottom-align">
                 <p class="angle-text" id="angle0"><span id="angle-0">-</span>˚</p>
                 <div class="base">
@@ -105,7 +106,7 @@
                     </div>
                 </div>  
             </div> -->
-        </div>
+        
     </div>
     <script src="/static/data.js"></script>
     <script src="/static/joy.js"></script>

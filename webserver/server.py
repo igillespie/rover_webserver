@@ -137,6 +137,48 @@ def create_app():
                         "angleLback": corner_state_data[3]["position"]
                     })
 
+                # if battery_state_node:
+                #     # Extract battery state data (voltage and current)
+                #     battery_state = {
+                #         "voltage": battery_state_node.battery_state.get("voltage", None),
+                #         "current": battery_state_node.battery_state.get("current", None)
+                #     }
+                #     data_to_emit["battery_state"] = battery_state
+                # else:
+                #     print("failed to find battery_state_node")
+
+                # if core_status_node:
+                #     core_status = {
+                #         "voltage": core_status_node.core_status.get("voltage", None),
+                #         "cpu_temp": core_status_node.core_status.get("cpu_temperature", None)
+                #     }
+                #     data_to_emit["core_status"] = core_status
+                #     #print(f"core status: {data_to_emit['core_status']}")
+                # else:
+                #     print("failed to find battery_state_node")
+
+                # Emit only if there's data to send
+                if data_to_emit:
+                    socketio.emit('update', data_to_emit)
+
+                # Add a small delay to prevent high CPU usage
+                socketio.sleep(0.1)
+            except Exception as e:
+                print(f"Error emitting data: {e}")
+                pass
+
+        
+
+    def slow_emitter(): 
+        while True:
+            try:
+                
+                battery_state_node = ros_controller.get_node("battery_state_subscriber")
+                core_status_node = ros_controller.get_node("core_status")
+                distance_node = ros_controller.get_node("distance")
+                # Build the data dictionary dynamically
+                data_to_emit = {}
+
                 if battery_state_node:
                     # Extract battery state data (voltage and current)
                     battery_state = {
@@ -157,26 +199,38 @@ def create_app():
                 else:
                     print("failed to find battery_state_node")
 
+                if distance_node:
+                    distance = {
+                        "distance": distance_node.distance
+                    }
+                    data_to_emit["distance"] = distance
+                    
+                else:
+                    print("failed to find distance_node")
+
                 # Emit only if there's data to send
                 if data_to_emit:
-                    socketio.emit('update', data_to_emit)
+                    socketio.emit('slow_update', data_to_emit)
 
                 # Add a small delay to prevent high CPU usage
+                socketio.sleep(1.0)
                 
             except Exception as e:
                 print(f"Error emitting data: {e}")
                 pass
 
-        socketio.sleep(0.1)
+       
 
     @socketio.on('connect')
     def handle_connect():
         print("Client connected")
         socketio.start_background_task(emitter)
+        socketio.start_background_task(slow_emitter)
 
     @socketio.on('disconnect')
-    def handle_disconnect():
+    def handle_disconnect(environ=None):
         print("Client disconnected")
+        
 
     @socketio.on_error_default
     def default_error_handler(e):
