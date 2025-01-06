@@ -9,7 +9,7 @@ class JoystickPublisher(Node):
         super().__init__('web_joystick_publisher')
         self.publisher = self.create_publisher(Joy, 'joy', 10)
 
-    def publish_joystick_data(self, x, y):
+    def publish_joystick_data(self, x, y, yaw):
         """
         Publish joystick data as sensor_msgs/Joy.
         """
@@ -18,6 +18,7 @@ class JoystickPublisher(Node):
         buttons = [0] * 14
 
         # Map JavaScript joystick data to appropriate axes
+        axes[0] = float(yaw)
         axes[3] = float(x)  # Axis 3: Angular velocity (Yaw)
         axes[4] = float(y)  # Axis 4: Linear velocity (Forward/Backward)
 

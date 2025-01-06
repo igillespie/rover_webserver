@@ -34,9 +34,9 @@ class ROSController:
         self.nodes["corner_state_subscriber"] = corner_state_subscriber
         self.executor.add_node(corner_state_subscriber)
 
-        main_camera_subscriber = MainCameraSubscriber()
-        self.nodes["main_camera_subscriber"] = main_camera_subscriber
-        self.executor.add_node(main_camera_subscriber)
+        # main_camera_subscriber = MainCameraSubscriber()
+        # self.nodes["main_camera_subscriber"] = main_camera_subscriber
+        # self.executor.add_node(main_camera_subscriber)
 
         battery_state_subscriber = BatteryStateSubscriber()
         self.nodes["battery_state_subscriber"] = battery_state_subscriber

@@ -1,6 +1,8 @@
 document.addEventListener("DOMContentLoaded", function() {
-    const socket = io();
-
+    
+    const socket = io({
+      transports: ["websocket"],
+    });
     socket.on('connect', function() {
         console.log('Connected to server');
     });
@@ -26,22 +28,25 @@ document.addEventListener("DOMContentLoaded", function() {
         joyX *= SCALE_FACTOR;
         joyY *= SCALE_FACTOR;
 
-        
+        let joyYaw = 0.0
     
         // Emit the normalized and adjusted joystick data
         //Don't send while testing, just log
         //console.log("Processed joystick data: ", { x: joyX, y: joyY });
-        socket.emit('command',  {"type": "joyStick", "info": {"x": joyX, "y": joyY}});
+        socket.emit('command',  {"type": "joyStick", "info": {"x": joyX, "y": joyY, yaw: joyYaw}});
     });
 
     socket.on('slow_update', function(data) {
         updateBatterStatus(data);
         updateCoreStatus(data);
-        updateOdometry(data);
+       
     });
     socket.on('update', function(data) {
 
-        const maxVelocity = 3; // unknown unit
+        //console.log("raw data " + JSON.stringify(data));
+        updateOdometry(data);
+        
+        const maxVelocity = 6; // unknown unit
         // const maxAngle = 1 // unknown unit
         document.documentElement.style.setProperty('--left-speed', `${Math.round(data.left_front*(-100/maxVelocity))}px`);
         document.documentElement.style.setProperty('--right-speed', `${Math.round(data.right_front*(-100/maxVelocity))}px`);
@@ -159,54 +164,105 @@ document.addEventListener("DOMContentLoaded", function() {
         console.log('Disconnected from server');
     });
 
+    const keysPressed = new Set();
     document.addEventListener('keydown', (event) => {
-        if (event.key == 'ArrowUp') {
-            socket.emit('command', ["forward"]);
-        }
-        if (event.key == 'ArrowDown') {
-            socket.emit('command', ["backward"]);
-        }
-        if (event.key == 'ArrowLeft') {
-            socket.emit('command', ["left"]);
-        }
-        if (event.key == 'ArrowRight') {
-            socket.emit('command', ["right"]);
-        }
-        if (event.key == 'b') {
-            socket.emit('command', ["stop"]);
-        }
-        if (event.key == '[') {
-            socket.emit('command', ["spin_left"]);
-        }
-        if (event.key == ']') {
-            socket.emit('command', ["spin_right"]);
-        }
-        if (event.key == 'w') {
-            socket.emit('command', ["joint1_down"]);
-        }
-        if (event.key == 's') {
-            socket.emit('command', ["joint1_up"]);
-        }
-        if (event.key == 'a') {
-            socket.emit('command', ["joint0_left"]);
-        }
-        if (event.key == 'd') {
-            socket.emit('command', ["joint0_right"]);
-        }
-        if (event.key == 'i') {
-            socket.emit('command', ["joint2_down"]);
-        }
-        if (event.key == 'k') {
-            socket.emit('command', ["joint2_up"]);
-        };
+
+        keysPressed.add(event.key);
+        let joyX = 0, joyY = 0, joyYaw = 0;
+        let rotationKeyPressed = false;
+
+        // Loop through all currently pressed keys
+        keysPressed.forEach((key) => {
+            switch (key) {
+                case "[":
+                    rotationKeyPressed = true;
+                    joyYaw -= 0.7; // Rotate left
+                    break;
+                case "]":
+                    rotationKeyPressed = true;
+                    joyYaw += 0.7; // Rotate right
+                    break;
+                case "ArrowUp":
+                    if (!rotationKeyPressed) joyY += 0.5; // Forward
+                    break;
+                case "ArrowDown":
+                    if (!rotationKeyPressed) joyY -= 0.5; // Backward
+                    break;
+                case "ArrowLeft":
+                    if (!rotationKeyPressed) joyX += 0.4; // Left
+                    break;
+                case "ArrowRight":
+                    if (!rotationKeyPressed) joyX -= 0.4; // Right
+                    break;
+            }
+        });
+
+        // Emit joystick data
+        // console.log("Joystick Data:", { joyX, joyY, joyYaw });
+        socket.emit('command', { type: "joyStick", info: { x: joyX, y: joyY, yaw: joyYaw } });
+        // if (event.key == 'ArrowUp') {
+        //     socket.emit('command', ["forward"]);
+        // }
+        // if (event.key == 'ArrowDown') {
+        //     socket.emit('command', ["backward"]);
+        // }
+        // if (event.key == 'ArrowLeft') {
+        //     socket.emit('command', ["left"]);
+        // }
+        // if (event.key == 'ArrowRight') {
+        //     socket.emit('command', ["right"]);
+        // }
+        // if (event.key == 'b') {
+        //     socket.emit('command', ["stop"]);
+        // }
+        // if (event.key == '[') {
+        //     socket.emit('command', ["spin_left"]);
+        // }
+        // if (event.key == ']') {
+        //     socket.emit('command', ["spin_right"]);
+        // }
+        // if (event.key == 'w') {
+        //     socket.emit('command', ["joint1_down"]);
+        // }
+        // if (event.key == 's') {
+        //     socket.emit('command', ["joint1_up"]);
+        // }
+        // if (event.key == 'a') {
+        //     socket.emit('command', ["joint0_left"]);
+        // }
+        // if (event.key == 'd') {
+        //     socket.emit('command', ["joint0_right"]);
+        // }
+        // if (event.key == 'i') {
+        //     socket.emit('command', ["joint2_down"]);
+        // }
+        // if (event.key == 'k') {
+        //     socket.emit('command', ["joint2_up"]);
+        // };
     });
 
     document.addEventListener('keyup', (event) => {
-        if (event.key == '[' || event.key == ']') {
-            socket.emit('command', ["stop_spin", "stop"]);
+        keysPressed.delete(event.key);
+        let joyX = 0, joyY = 0, joyYaw = 0;
+
+        if (event.key === "[" || event.key === "]") {
+            // Stop immediately when rotation keys are released
+            joyYaw = 0;
+            joyX = 0;
+            joyY = 0;
+        } else if (["ArrowLeft", "ArrowRight"].includes(event.key)) {
+            // Stop turning but keep forward/backward movement if up/down keys are still pressed
+            joyY = keysPressed.has("ArrowUp") ? 0.5 : keysPressed.has("ArrowDown") ? -0.5 : 0;
+            joyX = 0;
         }
-        if (event.key == "ArrowUp" || event.key == "ArrowDown" || event.key == "ArrowLeft" || event.key == "ArrowRight") {
-            socket.emit('command', ["stop"]);
-        }});
+        // } else if (["ArrowUp", "ArrowDown"].includes(event.key)) {
+        //     // Stop forward/backward movement but keep turning if left/right keys are still pressed
+        //     joyX = keysPressed.has("ArrowLeft") ? 0.25 : keysPressed.has("ArrowRight") ? -0.25 : 0;
+        //     joyY = 0;
+        // }
+
+        // Emit joystick data only once
+        socket.emit("command", { "type": "joyStick", "info": { "x": joyX, "y": joyY, "yaw": joyYaw } });
+    });
 
 });
