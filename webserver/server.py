@@ -9,13 +9,21 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import robot_sensors as sensors
 import threading
 from ros_controller.ros_controller import ROSController
-# import time
+# import base64
+import zlib
+import time
+import numpy as np
+from PIL import Image
+from skimage.metrics import structural_similarity as ssim  # For SSIM comparison
+import io
+
 
 app = Flask(__name__, static_folder="static")
 
 ros_controller = None
 lock = threading.Lock()  # Ensure thread-safe access to cached images
 
+previous_image = None
 
 
 def create_app():
@@ -46,47 +54,26 @@ def create_app():
 
     @app.route('/video_feed')
     def video_feed():
-        """
-        Flask route to provide an MJPEG stream of the camera frames.
-        """
         def generate():
+            prev_time = time.time()
+            target_fps = 10  # Limit to 10 FPS
+            frame_interval = 1.0 / target_fps
+            main_camera_node = ros_controller.get_node("main_camera_subscriber")
             while True:
-                try:
-                    # Access the MainCameraSubscriber node
-                    # all = ros_controller.get_all_nodes()
-                    # print(f"all nodes {all}")
-                    main_camera_node = ros_controller.get_node("main_camera_subscriber")
-                    if not main_camera_node:
-                        print("MainCameraSubscriber node not found.")
-                        break
+                current_time = time.time()
+                elapsed_time = current_time - prev_time
 
-                    #with lock:
-                        # Get the latest cached image
+                if elapsed_time >= frame_interval:
+                    # Fetch and yield the frame
                     cached_image = main_camera_node.get_cached_image()
-
                     if cached_image:
-                        # Log the size of the cached image
-                        #print(f"Cached image size: {len(cached_image.data)} bytes")
-                        #print(f"Image timestamp: {cached_image.header.stamp.sec}.{cached_image.header.stamp.nanosec}")
-                        
-                        # Yield the JPEG image as an MJPEG frame
                         yield (b'--frame\r\n'
-                            b'Content-Type: image/jpeg\r\n\r\n' + cached_image.data + b'\r\n')
-                    else:
-                        # Log that no image is available
-                        #print("No cached image available.")
-                        
-                        # Yield a blank frame
-                        yield (b'--frame\r\n'
-                            b'Content-Type: image/jpeg\r\n\r\n' + b'' + b'\r\n')
-                except Exception as e:
-                    print(f"Error in video_feed: {e}")
-                    break
-
-        print("Starting MJPEG video stream...")
-        response = Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
-        print("MJPEG video stream started.")
-        return response
+                            b'Content-Type: image/jpeg\r\n\r\n' +
+                            cached_image.data + b'\r\n')
+                    prev_time = current_time
+                else:
+                    time.sleep(frame_interval - elapsed_time)
+        return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
         
     @socketio.on('command')
     def handle_command(data):
@@ -109,6 +96,17 @@ def create_app():
                         print("Incomplete joystick info received. Publish stop")
                 else:
                     print("Joystick publisher node is not available.")
+            elif data.get('type') == 'turn_in_place':
+                turn_in_place = ros_controller.get_node("turn_in_place_publisher") if ros_controller else None
+                action = data.get("action")
+                # Map actions to angle and speed
+                if action == "left":
+                    turn_in_place.publish_command(-20, 90) 
+                elif action == "right":
+                    turn_in_place.publish_command(20, 90)  
+                else:
+                    print(f"Unknown action: {action}")
+                        
             else:
                 print("Unhandled command type received.")
         except Exception as e:
@@ -161,10 +159,50 @@ def create_app():
                 pass
 
             # Add a small delay to prevent high CPU usage
-            socketio.sleep(0.1)
+            socketio.sleep(0.25)
 
-        
+    
+    def image_emitter():
+        global previous_image
+        fps = 15
+        while True:
+            try:
+                camera_node = ros_controller.get_node("main_camera_subscriber")
+                compressed_image = camera_node.get_cached_image()
 
+
+                 # Convert image data to a NumPy array
+                current_image = np.array(Image.open(io.BytesIO(bytes(compressed_image.data))))
+                # If there's a previous image, compute the difference
+                if previous_image is not None:
+                    # Compute SSIM between current and previous images
+                    similarity, _ = ssim(previous_image, current_image, full=True, multichannel=True, channel_axis=-1)
+                    if similarity > 0.9:  # Skip if images are very similar
+                        #print("Images are similar, skipping transmission.")
+                        socketio.sleep(1 / fps)  # Maintain FPS rate
+                        continue
+                
+                # Update the previous image
+                previous_image = current_image
+
+                # Ensure data is converted to bytes
+                jpeg_bytes = bytes(compressed_image.data)  # Convert array.array to bytes
+
+                # Compress the data
+                compressed_jpeg = zlib.compress(jpeg_bytes)
+                socketio.emit('image_update', compressed_jpeg)
+                # Log transmission
+                #print("Image sent.")
+                # Emit the Base64-encoded JPEG bytes to the client
+                # data_to_emit = {"jpeg_data": compressed_jpeg.hex()}  # Convert to hex for JSON compatibility
+                # socketio.emit('image_update', data_to_emit)
+
+            except Exception as e:
+                print(f"Error emitting data: {e}")
+                pass
+             # Add a small delay to prevent high CPU usage
+            socketio.sleep(1/fps)
+            
     def slow_emitter(): 
         while True:
             try:
@@ -178,7 +216,7 @@ def create_app():
                 if battery_state_node:
                     # Extract battery state data (voltage and current)
                     battery_state = {
-                        "voltage": battery_state_node.battery_state.get("voltage", None),
+                        #"voltage": battery_state_node.battery_state.get("voltage", None), #this voltage isn't very accurate from the INA260 and no one knows why
                         "current": battery_state_node.battery_state.get("current", None)
                     }
                     data_to_emit["battery_state"] = battery_state
@@ -188,12 +226,13 @@ def create_app():
                 if core_status_node:
                     core_status = {
                         "voltage": core_status_node.core_status.get("voltage", None),
-                        "cpu_temp": core_status_node.core_status.get("cpu_temperature", None)
+                        "cpu_temp": core_status_node.core_status.get("cpu_temperature", None),
+                        "uptime": core_status_node.core_status.get("uptime", None)
                     }
                     data_to_emit["core_status"] = core_status
                     #print(f"core status: {data_to_emit['core_status']}")
                 else:
-                    print("failed to find battery_state_node")
+                    print("failed to find core_status_node")
 
                 # Emit only if there's data to send
                 if data_to_emit:
@@ -211,6 +250,7 @@ def create_app():
         print("Client connected")
         socketio.start_background_task(emitter)
         socketio.start_background_task(slow_emitter)
+        socketio.start_background_task(image_emitter)
 
     @socketio.on('disconnect')
     def handle_disconnect(environ=None):

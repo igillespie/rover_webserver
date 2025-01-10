@@ -15,14 +15,22 @@
         <h1>Scout Control</h1>
         <div class="row">
             <div class="col-8">
-                <video id="hls-video" class="img-fluid" controls autoplay style="max-width: 100%; height: auto;">
+                <!-- <video id="hls-video" class="img-fluid" controls autoplay style="max-width: 100%; height: auto;">
                     <source src="/hls/live.m3u8" type="application/vnd.apple.mpegurl">
                 </video>
+                <p>Slow image</p> -->
+                <img id="image-display" alt="Non-Streaming Image" style="max-width: 100%; height: auto;">
                 <!-- <img id="video-feed" src="/video_feed" alt="Main Camera Feed" class="img-fluid"> -->
             </div>
-            <div class="col-4">
+            <div class="col-4 text-center">
                 <struct>
-                    <div id="joyDiv" style="width:200px;height:200px;"></div> <!-- margin-bottom:20px; -->
+                    <div style="display: flex; justify-content: center;">
+                        <div id="joyDiv" style="width:200px; height:200px;"></div>
+                    </div>
+                    <div style="margin-top:20px; text-align:center;">
+                        <button id="leftTurnInPlace" class="btn btn-primary">Left</button>
+                        <button id="rightTurnInPlace" class="btn btn-primary">Right</button>
+                    </div>
                 </struct>
             </div>
         </div>
@@ -34,7 +42,7 @@
                 <div class="panel-title">Core Status</div>
                 <div class="panel-content">
                   <span id="core-status-cpu-temp" >CPU Temp: --°C</span>
-                  <span id="core-status-voltage">Voltage: --V</span>
+                  <span id="core-status-uptime">Uptime: --V</span>
                  
                 </div>
               </div>
@@ -51,7 +59,7 @@
               <div class="panel">
                 <div class="panel-title">Battery</div>
                 <div class="panel-content">
-                  <span id="battery-voltage">Voltage: --V</span>
+                  <span id="core-status-voltage">Voltage: --V</span>
                   <span id="battery-amps">Amps: --A</span>
                 </div>
               </div>
@@ -111,7 +119,8 @@
             </div> -->
         
     </div>
-    <script src="{{ url_for('static', filename='data.js') }}?v=1.0.2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.4/pako.min.js"></script>
+    <script src="{{ url_for('static', filename='data.js') }}?v=1.0.1"></script>
     <script src="{{ url_for('static', filename='joy.js') }}"></script>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
 </body> 

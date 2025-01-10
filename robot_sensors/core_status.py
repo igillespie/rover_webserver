@@ -12,7 +12,7 @@ class CoreStatus(Node):
             Status, 
             '/motor_controllers/status',
             self.status_callback,
-            10  # QoS depth
+            3  # QoS depth
         )
 
         # Subscribe to CPU temperature
@@ -20,13 +20,22 @@ class CoreStatus(Node):
             Float32,
             '/cpu_temperature',
             self.cpu_temperature_callback,
-            10  # QoS depth
+            3  # QoS depth
+        )
+
+        # Subscribe to CPU temperature
+        self.uptime_subscription = self.create_subscription(
+            Float32,
+            '/uptime',
+            self.uptime_callback,
+            3  # QoS depth
         )
 
         # Initialize the core_status dictionary
         self.core_status = {
             'voltage': None,  # Default value
-            'cpu_temperature': None   # CPU temperature
+            'cpu_temperature': None,   # CPU temperature
+            'uptime': None
         }
 
         self.get_logger().info("CoreStatus node has been started.")
@@ -51,6 +60,12 @@ class CoreStatus(Node):
             # self.get_logger().info(f"Updated CPU Temperature: {self.core_status['cpu_temperature']:.2f} °C")
         except AttributeError:
             self.get_logger().error("Failed to process CPU temperature message.")
+
+    def uptime_callback(self, msg):
+        try:
+            self.core_status['uptime'] = msg.data
+        except AttributeError:
+            self.get_logger().error("Failed to process Uptime message.")
 
 def main(args=None):
     rclpy.init(args=args)

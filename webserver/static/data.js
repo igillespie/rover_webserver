@@ -37,15 +37,34 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     socket.on('slow_update', function(data) {
-        updateBatterStatus(data);
+        updateBatteryStatus(data);
         updateCoreStatus(data);
        
     });
+    socket.on('image_update', function(data) {
+        // Convert ArrayBuffer to a Uint8Array
+        const uint8Array = new Uint8Array(data);
+
+        // Decompress the binary data if it's zlib-compressed
+        const decompressedData = pako.inflate(uint8Array);
+
+        // Convert to a Base64 string (if needed for displaying as an image)
+        const base64String = btoa(String.fromCharCode(...decompressedData));
+
+        // Create a data URL for the image
+        const imageUrl = `data:image/jpeg;base64,${base64String}`;
+
+        // Update the <img> element
+        const imgElement = document.getElementById('image-display');
+        imgElement.src = imageUrl;
+
+        });
+
     socket.on('update', function(data) {
 
         //console.log("raw data " + JSON.stringify(data));
         updateOdometry(data);
-        
+
         const maxVelocity = 6; // unknown unit
         // const maxAngle = 1 // unknown unit
         document.documentElement.style.setProperty('--left-speed', `${Math.round(data.left_front*(-100/maxVelocity))}px`);
@@ -74,19 +93,69 @@ document.addEventListener("DOMContentLoaded", function() {
         document.getElementById('BR-angle').textContent = Math.round(data.angleRback);
     });
 
+    document.getElementById('leftTurnInPlace').addEventListener('click', function() {
+        console.log('Left button clicked');
+        // Add custom logic for Left button
+        handleLeftButtonClick();
+    });
+
+    // Function to handle Right button click
+    document.getElementById('rightTurnInPlace').addEventListener('click', function() {
+        console.log('Right button clicked');
+        // Add custom logic for Right button
+        handleRightButtonClick();
+    });
+
+    // Custom logic for Left button
+    function handleLeftButtonClick() {
+        // Example: Send a command to the server
+        socket.emit('command', { type: 'turn_in_place', action: 'left' });
+    }
+
+    // Custom logic for Right button
+    function handleRightButtonClick() {
+        // Example: Send a command to the server
+        socket.emit('command', { type: 'turn_in_place', action: 'right' });
+    }
+
+    function formatSecondsToTime(seconds) {
+        // Round the seconds to the nearest integer
+        const totalSeconds = Math.round(seconds);
+    
+        // Calculate hours, minutes, and seconds
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const secs = totalSeconds % 60;
+    
+        // Format with leading zeros if needed
+        const formattedTime = [
+            hours.toString().padStart(2, '0'),
+            minutes.toString().padStart(2, '0'),
+            secs.toString().padStart(2, '0')
+        ].join(':');
+    
+        return formattedTime;
+    }
+
     function updateCoreStatus(data) {
 
         if (data.core_status) {
             // console.log("data " + JSON.stringify(data))
-            let voltage = data.core_status.voltage
-            let cpu_temp = data.core_status.cpu_temp
+            let voltage = data.core_status.voltage;
+            let cpu_temp = data.core_status.cpu_temp;
+            let uptime = formatSecondsToTime(data.core_status.uptime);
 
+            //this is actually in the battery section
             let batteryVoltageElement = document.getElementById('core-status-voltage');
+
             let cpuElement = document.getElementById('core-status-cpu-temp');
+            let uptimeElement = document.getElementById('core-status-uptime');
 
             // Check if the elements exist and update their content
-            if (batteryVoltageElement && cpuElement) {
+            if (batteryVoltageElement && cpuElement && uptimeElement) {
                 // Ensure the data is valid and update the text content
+
+                //this voltage element is actually in the Battery panel, just fyi
                 if (typeof voltage === 'number' && !isNaN(voltage)) {
                     batteryVoltageElement.textContent = `Voltage: ${voltage.toFixed(2)} V`;
                 } else {
@@ -99,6 +168,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     cpuElement.textContent = 'CPU Temp: --˚';
                 }
 
+                uptimeElement.textContent = `Uptime: ${uptime}`;
+
                
             } else {
                 console.error('Core status elements not found in the DOM.');
@@ -106,26 +177,20 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    function updateBatterStatus(data) {
+    function updateBatteryStatus(data) {
         if (data.battery_state) {
             // console.log('Battery State:', data.battery_state);
             // Example data for voltage and amps
-            let voltage = data.battery_state.voltage; // Voltage in volts
+            // let voltage = data.battery_state.voltage; // Voltage in volts
             let amps = data.battery_state.current;     // Current in amperes
 
             // Get the HTML elements by their IDs
-            let batteryVoltageElement = document.getElementById('battery-voltage');
+            // let batteryVoltageElement = document.getElementById('battery-voltage');
             let batteryAmpsElement = document.getElementById('battery-amps');
 
             // Check if the elements exist and update their content
-            if (batteryVoltageElement && batteryAmpsElement) {
-                // Ensure the data is valid and update the text content
-                if (typeof voltage === 'number' && !isNaN(voltage)) {
-                    batteryVoltageElement.textContent = `Voltage: ${voltage.toFixed(2)} V`;
-                } else {
-                    batteryVoltageElement.textContent = 'Voltage: --';
-                }
-
+            if (batteryAmpsElement) {
+               
                 if (typeof amps === 'number' && !isNaN(amps)) {
                     batteryAmpsElement.textContent = `Amps: ${amps.toFixed(2)} A`;
                 } else {
@@ -152,7 +217,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (typeof distance === 'number' && !isNaN(distance)) {
                     odomDistance.textContent = `Disance: ${distance.toFixed(2)} M`;
                 } else {
-                    odomDistance.textContent = 'Disance: -- M';
+                    odomDistance.textContent = 'Distance: -- M';
                 }
             } else {
                 console.error('Battery elements not found in the DOM.');

@@ -1,5 +1,6 @@
 import rclpy # type: ignore
 from web_publishers.joystick_publisher import JoystickPublisher
+from web_publishers.turn_in_place_publisher import TurnInPlacePublisher
 from robot_sensors.drive_state import DriveStateSubscriber
 from robot_sensors.corner_state import CornerStateSubscriber
 from robot_sensors.main_camera import MainCameraSubscriber
@@ -24,6 +25,10 @@ class ROSController:
         self.nodes['joystick_publisher'] = joystick_publisher
         self.executor.add_node(joystick_publisher)
 
+        turn_in_place_publisher = TurnInPlacePublisher()
+        self.nodes['turn_in_place_publisher'] = turn_in_place_publisher
+        self.executor.add_node(turn_in_place_publisher)
+
     def start_subscriber_nodes(self):
         """Start all subscriber nodes."""
         drive_state_subscriber = DriveStateSubscriber()
@@ -34,9 +39,9 @@ class ROSController:
         self.nodes["corner_state_subscriber"] = corner_state_subscriber
         self.executor.add_node(corner_state_subscriber)
 
-        # main_camera_subscriber = MainCameraSubscriber()
-        # self.nodes["main_camera_subscriber"] = main_camera_subscriber
-        # self.executor.add_node(main_camera_subscriber)
+        main_camera_subscriber = MainCameraSubscriber()
+        self.nodes["main_camera_subscriber"] = main_camera_subscriber
+        self.executor.add_node(main_camera_subscriber)
 
         battery_state_subscriber = BatteryStateSubscriber()
         self.nodes["battery_state_subscriber"] = battery_state_subscriber
@@ -79,7 +84,20 @@ class ROSController:
         """Shut down all nodes and stop spinning."""
         if rclpy.ok():  # Check if the context is still active
             self.running = False
+
+            # Shutdown the executor
             self.executor.shutdown()
+
+            # Destroy all nodes
+            for node_name, node in self.nodes.items():
+                print(f"Destroying node: {node_name}")
+                node.destroy_node()
+
+            # Clear the nodes dictionary
+            self.nodes.clear()
+
+            # Shutdown the ROS context
             rclpy.shutdown()
+            print("ROS context shut down successfully.")
         else:
             print("ROS context already shut down.")
