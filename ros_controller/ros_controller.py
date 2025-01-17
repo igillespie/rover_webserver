@@ -1,12 +1,13 @@
 import rclpy # type: ignore
 from web_publishers.joystick_publisher import JoystickPublisher
-from web_publishers.turn_in_place_publisher import TurnInPlacePublisher
+from web_publishers.movement_publisher import MovementCommandPublisher
 from robot_sensors.drive_state import DriveStateSubscriber
 from robot_sensors.corner_state import CornerStateSubscriber
 from robot_sensors.main_camera import MainCameraSubscriber
 from robot_sensors.battery import BatteryStateSubscriber
 from robot_sensors.core_status import CoreStatus
 from robot_sensors.distance import Distance
+from robot_sensors.mast_status import MastStatus
 
 from rclpy.executors import MultiThreadedExecutor # type: ignore
 import threading
@@ -25,9 +26,10 @@ class ROSController:
         self.nodes['joystick_publisher'] = joystick_publisher
         self.executor.add_node(joystick_publisher)
 
-        turn_in_place_publisher = TurnInPlacePublisher()
-        self.nodes['turn_in_place_publisher'] = turn_in_place_publisher
-        self.executor.add_node(turn_in_place_publisher)
+        movement_command_publisher = MovementCommandPublisher()
+        self.nodes['movement_command_publisher'] = movement_command_publisher
+        self.executor.add_node(movement_command_publisher)
+
 
     def start_subscriber_nodes(self):
         """Start all subscriber nodes."""
@@ -54,7 +56,10 @@ class ROSController:
         distance = Distance()
         self.nodes["distance"] = distance
         self.executor.add_node(distance)
-       
+
+        mast = MastStatus()
+        self.nodes["mast"] = mast
+        self.executor.add_node(mast)
         
 
     def spin_all_nodes(self):

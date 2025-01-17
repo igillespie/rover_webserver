@@ -86,7 +86,7 @@ def create_app():
                 y = info.get('y')  # Get 'y' value from 'info'
                 yaw = info.get('yaw')
                 # Ensure joy_node is retrieved
-                joy_node = ros_controller.get_node("joystick_publisher") if ros_controller else None
+                joy_node = ros_controller.get_node("joystick_publisher")
 
                 if joy_node is not None:
                     if x is not None and y is not None and yaw is not None:  # Proceed if both 'x' and 'y' and 'yaw' are present
@@ -97,15 +97,32 @@ def create_app():
                 else:
                     print("Joystick publisher node is not available.")
             elif data.get('type') == 'turn_in_place':
-                turn_in_place = ros_controller.get_node("turn_in_place_publisher") if ros_controller else None
+                movement_command_publisher = ros_controller.get_node("movement_command_publisher")
                 action = data.get("action")
                 # Map actions to angle and speed
                 if action == "left":
-                    turn_in_place.publish_command(-20, 90) 
+                    movement_command_publisher.publish_turn_in_place_command(-20, 90) 
                 elif action == "right":
-                    turn_in_place.publish_command(20, 90)  
+                    movement_command_publisher.publish_turn_in_place_command(20, 90)  
                 else:
                     print(f"Unknown action: {action}")
+
+            elif data.get('type') == 'move_distance':
+                movement_command_publisher = ros_controller.get_node("movement_command_publisher") if ros_controller else None
+                distance = data.get("distance")
+                if distance < -3.0 or distance > 3.0:
+                    print(f"Error: Distance value {distance} meters is out of range (-3 to 3 meters). Command ignored.")
+                    return
+
+                # Map actions to angle and speed
+                movement_command_publisher.publish_move_distance_command(distance)
+
+            elif data.get('type') == 'mast_control':
+                print("got mast_control command.")
+                mast = ros_controller.get_node("mast") if ros_controller else None
+                pan_angle = data.get("pan_angle")
+    
+                mast.set_mast_pan_tilt_angles_incremental(pan_angle, 0)
                         
             else:
                 print("Unhandled command type received.")
@@ -122,6 +139,7 @@ def create_app():
                 drive_state_data = ros_controller.get_node("drive_state_subscriber").drive_state.get_velocity()
                 corner_state_data = ros_controller.get_node("corner_state_subscriber").corner_state
                 distance_node = ros_controller.get_node("distance")
+                mast_node = ros_controller.get_node("mast")
 
                 # Build the data dictionary dynamically
                 data_to_emit = {}
@@ -148,6 +166,13 @@ def create_app():
                 else:
                     print("failed to find distance_node")
 
+                if mast_node:
+                    mast = {
+                        "pan": mast_node.current_state.pan_position,
+                        "tilt": mast_node.current_state.tilt_position
+                    }
+                    data_to_emit["mast"] = mast
+
                 # Emit only if there's data to send
                 if data_to_emit and data_to_emit != last_emitted_data:
                     socketio.emit('update', data_to_emit)
@@ -164,7 +189,7 @@ def create_app():
     
     def image_emitter():
         global previous_image
-        fps = 15
+        fps = 30
         while True:
             try:
                 camera_node = ros_controller.get_node("main_camera_subscriber")

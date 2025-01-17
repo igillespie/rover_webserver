@@ -64,6 +64,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         //console.log("raw data " + JSON.stringify(data));
         updateOdometry(data);
+        updateMast(data);
 
         const maxVelocity = 6; // unknown unit
         // const maxAngle = 1 // unknown unit
@@ -94,14 +95,14 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     document.getElementById('leftTurnInPlace').addEventListener('click', function() {
-        console.log('Left button clicked');
+        // console.log('Left button clicked');
         // Add custom logic for Left button
         handleLeftButtonClick();
     });
 
     // Function to handle Right button click
     document.getElementById('rightTurnInPlace').addEventListener('click', function() {
-        console.log('Right button clicked');
+        // console.log('Right button clicked');
         // Add custom logic for Right button
         handleRightButtonClick();
     });
@@ -116,6 +117,52 @@ document.addEventListener("DOMContentLoaded", function() {
     function handleRightButtonClick() {
         // Example: Send a command to the server
         socket.emit('command', { type: 'turn_in_place', action: 'right' });
+    }
+
+    // Event listener for "Go" button
+    document.getElementById('goDistanceButton').addEventListener('click', function () {
+        const distanceInput = document.getElementById('distanceInput').value;
+        const confirmationMessage = document.getElementById('confirmationMessage');
+
+        // Validate input
+        if (isNaN(distanceInput) || distanceInput.trim() === '') {
+            alert('Please enter a valid number.');
+            return;
+        }
+
+        const distance = parseFloat(distanceInput);
+
+        // Send the command to the server
+        socket.emit('command', { type: 'move_distance', distance: distance });
+
+        // Clear the input field
+        document.getElementById('distanceInput').value = '';
+
+        // Show confirmation message
+        confirmationMessage.textContent = `Command ${distance}M sent`;
+        confirmationMessage.style.display = 'block';
+
+        // Hide the message after 3 seconds
+        setTimeout(() => {
+            confirmationMessage.style.display = 'none';
+        }, 3000);
+    });
+
+    // CAMERA
+
+    document.getElementById('leftMastPanButton').addEventListener('click', function() {
+        console.log('Left mast button clicked');
+        // Add custom logic for Right button
+        panMast(-10);
+    });
+    document.getElementById('rightMastPanButton').addEventListener('click', function() {
+        console.log('Right mast button clicked');
+        // Add custom logic for Right button
+        panMast(10);
+    });
+
+    function panMast(angle) {
+        socket.emit('command', { type: 'mast_control', pan_angle: angle });
     }
 
     function formatSecondsToTime(seconds) {
@@ -135,6 +182,15 @@ document.addEventListener("DOMContentLoaded", function() {
         ].join(':');
     
         return formattedTime;
+    }
+
+    function updateMast(data) {
+        if (data.mast) {
+            let pan = data.mast.pan
+            // let tilt = data.mast.title
+            let panElement = document.getElementById('pan_angle');
+            panElement.textContent = `Pan: ${pan}˚`;
+        }
     }
 
     function updateCoreStatus(data) {

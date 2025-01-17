@@ -8,7 +8,7 @@ body {
     border-radius: 5px;
     background-color: #333;
     padding: 15px;
-    min-height: 50px;
+    min-height: 200px;
 }
 .panel-title {
     font-size: 1.25rem;
