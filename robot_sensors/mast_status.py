@@ -28,6 +28,7 @@ class MastStatus(Node):
         self.current_state = msg
         self.get_logger().debug(f"Cached state: pan={msg.pan_position}, tilt={msg.tilt_position}, status={msg.status}")
 
+
     def set_mast_pan_tilt_angles_incremental(self, pan_delta, tilt_delta):
         if self.current_state is None:
             self.get_logger().warning("No current state available. Cannot set incremental angles.")

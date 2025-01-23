@@ -23,3 +23,9 @@ body {
 .panel-content span {
     display: block;
 }
+
+#image-display {
+    max-width: 100%; /* Let it scale to container */
+    width: 640px; /* Desired width */
+    height: auto; /* Maintain aspect ratio */
+}

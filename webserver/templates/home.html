@@ -4,7 +4,7 @@
     <meta charset="UTF-8"> 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scout</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='pose.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='pose.css')}}?no-cache=4">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link rel="stylesheet" href="{{ url_for('static', filename='main.css')}}?no-cache=2">
 </head>
@@ -19,7 +19,7 @@
                     <source src="/hls/live.m3u8" type="application/vnd.apple.mpegurl">
                 </video>
                 <p>Slow image</p> -->
-                <img id="image-display" alt="Non-Streaming Image" style="max-width: 100%; height: auto;">
+                <img id="image-display" alt="Non-Streaming Image">
                 <!-- <img id="video-feed" src="/video_feed" alt="Main Camera Feed" class="img-fluid"> -->
             </div>
             <div class="col-4 text-center">
@@ -74,10 +74,19 @@
                   <div class="panel-title">Camera</div>
                   <div class="panel-content">
                       <span id="pan_angle" >Pan: --˚</span>
-                      <div style="margin-top:20px; text-align:center;">
-                        <button id="leftMastPanButton" class="btn btn-secondary">Left</button>
-                        <button id="rightMastPanButton" class="btn btn-secondary">Right</button>
-                    </div>
+                      <span id="tilt_angle" >Tilt: --˚</span>
+                      <div style="margin-top:20px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                        <!-- Up button -->
+                        <button id="upMastPanButton" class="btn btn-secondary">Up</button>
+                        <div style="display: flex; gap: 10px;">
+                          <!-- Left, Center, Right buttons -->
+                          <button id="leftMastPanButton" class="btn btn-secondary">Left</button>
+                          <button id="centerMastPanButton" class="btn btn-secondary">O</button>
+                          <button id="rightMastPanButton" class="btn btn-secondary">Right</button>
+                        </div>
+                        <!-- Down button -->
+                        <button id="downMastPanButton" class="btn btn-secondary">Down</button>
+                      </div>
                   </div>
                 </div>
               </div>
@@ -151,8 +160,10 @@
         
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.4/pako.min.js"></script>
-    <script src="{{ url_for('static', filename='data.js') }}?no-cache=1.0.2"></script>
+    <script src="{{ url_for('static', filename='data.js') }}?no-cache=20-1050"></script>
     <script src="{{ url_for('static', filename='joy.js') }}"></script>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+   
+    <script src="{{ url_for('static', filename='urdf.js') }}"></script>
 </body> 
 </html>

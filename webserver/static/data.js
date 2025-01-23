@@ -7,58 +7,59 @@ document.addEventListener("DOMContentLoaded", function() {
         console.log('Connected to server');
     });
 
+    function throttle(func, limit) {
+        let inThrottle;
+        return function(...args) {
+            if (!inThrottle) {
+                func(...args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        };
+    }
+
     var Joy1 = new JoyStick('joyDiv', {
         internalFillColor: '#808080', // Dark gray color for the stick
         internalStrokeColor: '#A9A9A9', // Light gray border for the stick
         externalStrokeColor: '#D3D3D3',
-    }, function(stickData) {
+    }, throttle(function(stickData) {
 
-        //console.log("raw joy data " + JSON.stringify(stickData))
         let joyX = stickData.x / 100 * -1.0;  // Normalize the x-axis (-1 to 1)
-        let joyY = stickData.y / 100;  // Normalize the y-axis (-1 to 1)
-    
-        // Apply a dead zone to prevent small movements from being registered
-        const DEAD_ZONE = 0.05; // Adjust sensitivity (10% dead zone)
-    
+        let joyY = stickData.y / 100;        // Normalize the y-axis (-1 to 1)
+
+        // Apply a dead zone
+        const DEAD_ZONE = 0.05; 
         joyX = Math.abs(joyX) > DEAD_ZONE ? joyX : 0;
         joyY = Math.abs(joyY) > DEAD_ZONE ? joyY : 0;
-    
-        //Optionally scale the values to make the joystick less sensitive
-        const SCALE_FACTOR = 0.3; // Reduce to make it LESS sensitive
+
+        // Optionally scale the values
+        const SCALE_FACTOR = 0.3;
         joyX *= SCALE_FACTOR;
         joyY *= SCALE_FACTOR;
 
-        let joyYaw = 0.0
-    
-        // Emit the normalized and adjusted joystick data
-        //Don't send while testing, just log
-        //console.log("Processed joystick data: ", { x: joyX, y: joyY });
-        socket.emit('command',  {"type": "joyStick", "info": {"x": joyX, "y": joyY, yaw: joyYaw}});
-    });
+        let joyYaw = 0.0;
+
+        // Emit the joystick data
+        socket.emit('command', {"type": "joyStick", "info": {"x": joyX, "y": joyY, yaw: joyYaw}});
+        
+    }, 250)); // Throttle to emit once every xms
 
     socket.on('slow_update', function(data) {
         updateBatteryStatus(data);
         updateCoreStatus(data);
        
     });
-    socket.on('image_update', function(data) {
-        // Convert ArrayBuffer to a Uint8Array
-        const uint8Array = new Uint8Array(data);
-
-        // Decompress the binary data if it's zlib-compressed
-        const decompressedData = pako.inflate(uint8Array);
-
-        // Convert to a Base64 string (if needed for displaying as an image)
-        const base64String = btoa(String.fromCharCode(...decompressedData));
-
+    socket.on('image_update', (data) => {
+        // Convert ArrayBuffer to a Base64 string
+        const base64String = btoa(String.fromCharCode(...new Uint8Array(data)));
+        
         // Create a data URL for the image
         const imageUrl = `data:image/jpeg;base64,${base64String}`;
-
+        
         // Update the <img> element
         const imgElement = document.getElementById('image-display');
         imgElement.src = imageUrl;
-
-        });
+    });
 
     socket.on('update', function(data) {
 
@@ -148,21 +149,30 @@ document.addEventListener("DOMContentLoaded", function() {
         }, 3000);
     });
 
-    // CAMERA
-
+    // CAMERA MAST
     document.getElementById('leftMastPanButton').addEventListener('click', function() {
-        console.log('Left mast button clicked');
-        // Add custom logic for Right button
-        panMast(-10);
+        
+        coontrolMast(-10, 0);
     });
     document.getElementById('rightMastPanButton').addEventListener('click', function() {
-        console.log('Right mast button clicked');
-        // Add custom logic for Right button
-        panMast(10);
+        
+        coontrolMast(10, 0);
+    });
+    document.getElementById('upMastPanButton').addEventListener('click', function() {
+        
+        coontrolMast(0, 10);
+    });
+    document.getElementById('downMastPanButton').addEventListener('click', function() {
+        
+        coontrolMast(0, -10);
+    });
+    document.getElementById('centerMastPanButton').addEventListener('click', function() {
+        
+        coontrolMast(0, 0); //pass 0 to center?
     });
 
-    function panMast(angle) {
-        socket.emit('command', { type: 'mast_control', pan_angle: angle });
+    function coontrolMast(pan, tilt) {
+        socket.emit('command', { type: 'mast_control', pan_angle: pan, tilt_angle: tilt });
     }
 
     function formatSecondsToTime(seconds) {
@@ -187,9 +197,11 @@ document.addEventListener("DOMContentLoaded", function() {
     function updateMast(data) {
         if (data.mast) {
             let pan = data.mast.pan
-            // let tilt = data.mast.title
+            let tilt = data.mast.tilt
             let panElement = document.getElementById('pan_angle');
             panElement.textContent = `Pan: ${pan}˚`;
+            let tiltElement = document.getElementById('tilt_angle');
+            tiltElement.textContent = `Tilt: ${tilt}˚`;
         }
     }
 
@@ -286,102 +298,79 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     const keysPressed = new Set();
-    document.addEventListener('keydown', (event) => {
+    let speed = 1.0; // Initial speed
+    const defaultLinearSpeed = 0.5;
 
-        keysPressed.add(event.key);
+    document.addEventListener('keydown', (event) => {
+        keysPressed.add(event.key); // Add the pressed key to the set
+    
         let joyX = 0, joyY = 0, joyYaw = 0;
         let rotationKeyPressed = false;
-
+    
+         // Update speed dynamically based on whether "t" is pressed
+        speed = keysPressed.has("t") ? 2.0 : 1.0;
+    
         // Loop through all currently pressed keys
         keysPressed.forEach((key) => {
             switch (key) {
                 case "[":
                     rotationKeyPressed = true;
-                    joyYaw -= 0.7; // Rotate left
+                    joyYaw -= 0.7 * speed; // Rotate left, scale by speed
                     break;
                 case "]":
                     rotationKeyPressed = true;
-                    joyYaw += 0.7; // Rotate right
+                    joyYaw += 0.7 * speed; // Rotate right, scale by speed
                     break;
                 case "ArrowUp":
-                    if (!rotationKeyPressed) joyY += 0.5; // Forward
+                    if (!rotationKeyPressed) joyY += defaultLinearSpeed * speed; // Forward, scale by speed
                     break;
                 case "ArrowDown":
-                    if (!rotationKeyPressed) joyY -= 0.5; // Backward
+                    if (!rotationKeyPressed) joyY -= defaultLinearSpeed * speed; // Backward, scale by speed
                     break;
                 case "ArrowLeft":
-                    if (!rotationKeyPressed) joyX += 0.4; // Left
+                    if (!rotationKeyPressed) joyX += 0.4 * speed; // Left, scale by speed
                     break;
                 case "ArrowRight":
-                    if (!rotationKeyPressed) joyX -= 0.4; // Right
+                    if (!rotationKeyPressed) joyX -= 0.4 * speed; // Right, scale by speed
                     break;
             }
         });
-
+    
         // Emit joystick data
-        // console.log("Joystick Data:", { joyX, joyY, joyYaw });
         socket.emit('command', { type: "joyStick", info: { x: joyX, y: joyY, yaw: joyYaw } });
-        // if (event.key == 'ArrowUp') {
-        //     socket.emit('command', ["forward"]);
-        // }
-        // if (event.key == 'ArrowDown') {
-        //     socket.emit('command', ["backward"]);
-        // }
-        // if (event.key == 'ArrowLeft') {
-        //     socket.emit('command', ["left"]);
-        // }
-        // if (event.key == 'ArrowRight') {
-        //     socket.emit('command', ["right"]);
-        // }
-        // if (event.key == 'b') {
-        //     socket.emit('command', ["stop"]);
-        // }
-        // if (event.key == '[') {
-        //     socket.emit('command', ["spin_left"]);
-        // }
-        // if (event.key == ']') {
-        //     socket.emit('command', ["spin_right"]);
-        // }
-        // if (event.key == 'w') {
-        //     socket.emit('command', ["joint1_down"]);
-        // }
-        // if (event.key == 's') {
-        //     socket.emit('command', ["joint1_up"]);
-        // }
-        // if (event.key == 'a') {
-        //     socket.emit('command', ["joint0_left"]);
-        // }
-        // if (event.key == 'd') {
-        //     socket.emit('command', ["joint0_right"]);
-        // }
-        // if (event.key == 'i') {
-        //     socket.emit('command', ["joint2_down"]);
-        // }
-        // if (event.key == 'k') {
-        //     socket.emit('command', ["joint2_up"]);
-        // };
     });
 
     document.addEventListener('keyup', (event) => {
         keysPressed.delete(event.key);
+
         let joyX = 0, joyY = 0, joyYaw = 0;
+        
+        // Update speed dynamically based on remaining keys
+        speed = keysPressed.has("t") ? 2.0 : 1.0;
 
-        if (event.key === "[" || event.key === "]") {
-            // Stop immediately when rotation keys are released
-            joyYaw = 0;
-            joyX = 0;
-            joyY = 0;
-        } else if (["ArrowLeft", "ArrowRight"].includes(event.key)) {
-            // Stop turning but keep forward/backward movement if up/down keys are still pressed
-            joyY = keysPressed.has("ArrowUp") ? 0.5 : keysPressed.has("ArrowDown") ? -0.5 : 0;
-            joyX = 0;
-        }
-        // } else if (["ArrowUp", "ArrowDown"].includes(event.key)) {
-        //     // Stop forward/backward movement but keep turning if left/right keys are still pressed
-        //     joyX = keysPressed.has("ArrowLeft") ? 0.25 : keysPressed.has("ArrowRight") ? -0.25 : 0;
-        //     joyY = 0;
-        // }
-
+        // Recalculate joystick values after key release
+        keysPressed.forEach((key) => {
+            switch (key) {
+                case "[":
+                    joyYaw -= 0.7 * speed; // Rotate left
+                    break;
+                case "]":
+                    joyYaw += 0.7 * speed; // Rotate right
+                    break;
+                case "ArrowUp":
+                    joyY += defaultLinearSpeed * speed; // Forward
+                    break;
+                case "ArrowDown":
+                    joyY -= defaultLinearSpeed * speed; // Backward
+                    break;
+                case "ArrowLeft":
+                    joyX += 0.4 * speed; // Left
+                    break;
+                case "ArrowRight":
+                    joyX -= 0.4 * speed; // Right
+                    break;
+            }
+        });
         // Emit joystick data only once
         socket.emit("command", { "type": "joyStick", "info": { "x": joyX, "y": joyY, "yaw": joyYaw } });
     });
