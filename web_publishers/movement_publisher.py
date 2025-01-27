@@ -54,7 +54,7 @@ class MovementCommandPublisher(Node):
         """
         msg = TurnCommand()
         msg.angle_degrees = float(angle_degrees)
-        msg.angular_speed_deg_per_sec = float(angular_speed_deg_per_sec)
+        #msg.angular_speed_deg_per_sec = float(angular_speed_deg_per_sec)
         self.turn_publisher.publish(msg)
         # self.get_logger().info(
         #     f"Published TurnCommand: angle_degrees={angle_degrees}, angular_speed_deg_per_sec={angular_speed_deg_per_sec}"

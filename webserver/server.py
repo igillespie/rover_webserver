@@ -10,12 +10,13 @@ import robot_sensors as sensors
 import threading
 from ros_controller.ros_controller import ROSController
 # import base64
-import zlib
+# import zlib
 import time
 import numpy as np
 from PIL import Image
 from skimage.metrics import structural_similarity as ssim  # For SSIM comparison
 import io
+from datetime import datetime
 
 
 app = Flask(__name__, static_folder="static")
@@ -24,8 +25,10 @@ ros_controller = None
 lock = threading.Lock()  # Ensure thread-safe access to cached images
 
 previous_image = None
-is_emitting = False
-previous_image_emit_count = 0
+fps = 20  # Frames per second for image emiitter
+
+# is_emitting = False
+# previous_image_emit_count = 0
 
 def create_app():
 
@@ -102,9 +105,9 @@ def create_app():
                 action = data.get("action")
                 # Map actions to angle and speed
                 if action == "left":
-                    movement_command_publisher.publish_turn_in_place_command(-20, 90) 
+                    movement_command_publisher.publish_turn_in_place_command(20, 90) 
                 elif action == "right":
-                    movement_command_publisher.publish_turn_in_place_command(20, 90)  
+                    movement_command_publisher.publish_turn_in_place_command(-20, 90)  
                 else:
                     print(f"Unknown action: {action}")
 
@@ -127,9 +130,12 @@ def create_app():
                     mast.set_mast_pan_angle(150.0, 150.0) # Center it
                 else:
                     mast.set_mast_pan_tilt_angles_incremental(pan_angle, tilt_angle)
-                        
+            elif data.get('type') == 'capture_img':
+
+                handle_image_capture()
+
             else:
-                print("Unhandled command type received.")
+                print(f"Unhandled command type received. Received={data.get('type')}")
         except Exception as e:
             print(f"Error handling command: {e}")
 
@@ -192,46 +198,52 @@ def create_app():
 
     
     def image_emitter():
-        global previous_image, previous_image_emit_count
-        fps = 20
+        global previous_image
         while True:
             try:
+                # Get the cached image from the camera node
                 camera_node = ros_controller.get_node("main_camera_subscriber")
                 compressed_image = camera_node.get_cached_image()
-
-
-                 # Convert image data to a NumPy array
-                current_image = np.array(Image.open(io.BytesIO(bytes(compressed_image.data))).resize((320, 240)))
-                #If there's a previous image, compute the difference
+                
+                # Convert compressed image bytes to a PIL Image
+                pil_image = Image.open(io.BytesIO(compressed_image.data))
+                
+                # Resize the image
+                resized_image = pil_image.resize((320, 180))
+                
+                # Convert the resized image to a NumPy array
+                current_image = np.array(resized_image)
+                
+                # If there's a previous image, compute SSIM
                 if previous_image is not None:
-                    # Compute SSIM between current and previous images
-                    similarity, _ = ssim(previous_image, current_image, full=True, multichannel=True, channel_axis=-1)
-                    if similarity > 95:  # Skip if images are very similar
-                        #print("Images are similar, skipping transmission.")
+                    similarity, _ = ssim(
+                        previous_image, 
+                        current_image, 
+                        full=True, 
+                        multichannel=True, 
+                        channel_axis=-1
+                    )
+                    if similarity > 0.95:  # Skip sending if images are very similar
                         socketio.sleep(1 / fps)  # Maintain FPS rate
                         continue
                 
-                #Update the previous image
+                # Update the previous image
                 previous_image = current_image
-
-                # Ensure data is converted to bytes
-                jpeg_bytes = bytes(compressed_image.data)  # Convert array.array to bytes
-
-
-                # print("sending image")
+                
+                # Convert resized image back to JPEG bytes
+                # jpeg_buffer = io.BytesIO()
+                # resized_image.save(jpeg_buffer, format="JPEG")
+                # jpeg_bytes = jpeg_buffer.getvalue()
+                jpeg_bytes = bytes(compressed_image.data)
+                
+                # Emit the JPEG bytes to the client
                 socketio.emit('image_update', jpeg_bytes)
-                # Log transmission
-                #print("Image sent.")
-                # Emit the Base64-encoded JPEG bytes to the client
-                # data_to_emit = {"jpeg_data": compressed_jpeg.hex()}  # Convert to hex for JSON compatibility
-                # socketio.emit('image_update', data_to_emit)
 
             except Exception as e:
                 print(f"Error emitting data: {e}")
-                is_emitting = False  # Reset the flag on error
-                pass
-             # Add a small delay to prevent high CPU usage
-            socketio.sleep(1/fps)
+            
+            # Maintain the desired frame rate
+            socketio.sleep(1 / fps)
             
     def slow_emitter(): 
         while True:
@@ -273,7 +285,28 @@ def create_app():
                 pass
              # Add a small delay to prevent high CPU usage
             socketio.sleep(1.0)
-       
+
+    def handle_image_capture():
+        # Ensure the target directory exists
+        save_directory = "/home/pi/captured_images/"
+        os.makedirs(save_directory, exist_ok=True)  # Creates the directory if it doesn't exist
+
+        # Get the camera node and cached image
+        camera_node = ros_controller.get_node("main_camera_subscriber")
+        compressed_image = camera_node.get_cached_image()
+        
+        # Get the JPEG bytes
+        data = compressed_image.data
+        
+        # Generate the timestamped file name
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        file_name = f"{save_directory}{timestamp}.jpeg"
+        
+        # Write the data to the JPEG file
+        with open(file_name, "wb") as f:
+            f.write(data)
+
+        print(f"Image saved as '{file_name}'")
 
     @socketio.on('connect')
     def handle_connect():

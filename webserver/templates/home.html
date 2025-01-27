@@ -73,20 +73,29 @@
                 <div class="panel">
                   <div class="panel-title">Camera</div>
                   <div class="panel-content">
-                      <span id="pan_angle" >Pan: --˚</span>
-                      <span id="tilt_angle" >Tilt: --˚</span>
-                      <div style="margin-top:20px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                        <!-- Up button -->
-                        <button id="upMastPanButton" class="btn btn-secondary">Up</button>
-                        <div style="display: flex; gap: 10px;">
-                          <!-- Left, Center, Right buttons -->
-                          <button id="leftMastPanButton" class="btn btn-secondary">Left</button>
-                          <button id="centerMastPanButton" class="btn btn-secondary">O</button>
-                          <button id="rightMastPanButton" class="btn btn-secondary">Right</button>
+                    <div class="row">
+                        <div class="col-4">
+                            <button id="imageCapture" class="btn btn-secondary mb-3">Capture</button>
+                            <span id="pan_angle" >Pan: --˚</span>
+                            <span id="tilt_angle" >Tilt: --˚</span>
                         </div>
-                        <!-- Down button -->
-                        <button id="downMastPanButton" class="btn btn-secondary">Down</button>
-                      </div>
+                        <div class="col-8">
+                            <div style="margin-top:20px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                                <!-- Up button -->
+                                <button id="upMastPanButton" class="btn btn-secondary">Up</button>
+                                <div style="display: flex; gap: 10px;">
+                                  <!-- Left, Center, Right buttons -->
+                                  <button id="leftMastPanButton" class="btn btn-secondary">Left</button>
+                                  <button id="centerMastPanButton" class="btn btn-secondary">O</button>
+                                  <button id="rightMastPanButton" class="btn btn-secondary">Right</button>
+                                </div>
+                                <!-- Down button -->
+                                <button id="downMastPanButton" class="btn btn-secondary">Down</button>
+                              </div>
+                        </div>
+                    </div>
+                      
+                      
                   </div>
                 </div>
               </div>
@@ -160,10 +169,8 @@
         
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.4/pako.min.js"></script>
-    <script src="{{ url_for('static', filename='data.js') }}?no-cache=20-1050"></script>
+    <script src="{{ url_for('static', filename='data.js') }}?no-cache=26-1008"></script>
     <script src="{{ url_for('static', filename='joy.js') }}"></script>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-   
-    <script src="{{ url_for('static', filename='urdf.js') }}"></script>
 </body> 
 </html>

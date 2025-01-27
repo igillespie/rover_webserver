@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", function() {
         externalStrokeColor: '#D3D3D3',
     }, throttle(function(stickData) {
 
+        //console.log("Joy command")
         let joyX = stickData.x / 100 * -1.0;  // Normalize the x-axis (-1 to 1)
         let joyY = stickData.y / 100;        // Normalize the y-axis (-1 to 1)
 
@@ -50,15 +51,32 @@ document.addEventListener("DOMContentLoaded", function() {
        
     });
     socket.on('image_update', (data) => {
-        // Convert ArrayBuffer to a Base64 string
-        const base64String = btoa(String.fromCharCode(...new Uint8Array(data)));
-        
-        // Create a data URL for the image
-        const imageUrl = `data:image/jpeg;base64,${base64String}`;
-        
-        // Update the <img> element
-        const imgElement = document.getElementById('image-display');
-        imgElement.src = imageUrl;
+        try {
+            // Validate that data is an ArrayBuffer
+            if (!(data instanceof ArrayBuffer)) {
+                throw new Error("Invalid data format: Expected an ArrayBuffer.");
+            }
+    
+            // Convert ArrayBuffer to a Base64 string
+            const base64String = btoa(
+                String.fromCharCode(...new Uint8Array(data))
+            );
+    
+            // Create a data URL for the image
+            const imageUrl = `data:image/jpeg;base64,${base64String}`;
+    
+            // Update the <img> element
+            const imgElement = document.getElementById('image-display');
+            if (!imgElement) {
+                throw new Error("Image element with ID 'image-display' not found.");
+            }
+            imgElement.src = imageUrl;
+    
+            // console.log("Image updated successfully.");
+        } catch (error) {
+            // Log any errors for debugging
+            console.error("Error handling image update:", error.message);
+        }
     });
 
     socket.on('update', function(data) {
@@ -148,12 +166,17 @@ document.addEventListener("DOMContentLoaded", function() {
             confirmationMessage.style.display = 'none';
         }, 3000);
     });
-
+    // Camera capture
+    document.getElementById('imageCapture').addEventListener('click', function() {
+        captureImage();
+    });
+   
     // CAMERA MAST
     document.getElementById('leftMastPanButton').addEventListener('click', function() {
         
         coontrolMast(-10, 0);
     });
+
     document.getElementById('rightMastPanButton').addEventListener('click', function() {
         
         coontrolMast(10, 0);
@@ -170,6 +193,10 @@ document.addEventListener("DOMContentLoaded", function() {
         
         coontrolMast(0, 0); //pass 0 to center?
     });
+
+    function captureImage() {
+        socket.emit('command', { type: 'capture_img'});
+    }
 
     function coontrolMast(pan, tilt) {
         socket.emit('command', { type: 'mast_control', pan_angle: pan, tilt_angle: tilt });
@@ -283,7 +310,7 @@ document.addEventListener("DOMContentLoaded", function() {
             if (odomDistance) {
                 // Ensure the data is valid and update the text content
                 if (typeof distance === 'number' && !isNaN(distance)) {
-                    odomDistance.textContent = `Disance: ${distance.toFixed(2)} M`;
+                    odomDistance.textContent = `Distance: ${distance.toFixed(2)} M`;
                 } else {
                     odomDistance.textContent = 'Distance: -- M';
                 }
