@@ -24,7 +24,8 @@ app = Flask(__name__, static_folder="static")
 ros_controller = None
 lock = threading.Lock()  # Ensure thread-safe access to cached images
 
-USERS = {"cockpit": "rover"}
+#very basic pw protection
+USERS = {"your_username": "your_password"}
 
 previous_image = None
 fps = 20  # Frames per second for image emiitter
