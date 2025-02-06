@@ -24,8 +24,8 @@ app = Flask(__name__, static_folder="static")
 ros_controller = None
 lock = threading.Lock()  # Ensure thread-safe access to cached images
 
-#very basic pw protection
-USERS = {"your_username": "your_password"}
+#You can come up with your own basic username/password to people can't take control of your robot if you publish the website to the public
+USERS = {"cockpit": "rover"}
 
 previous_image = None
 fps = 20  # Frames per second for image emiitter
@@ -82,28 +82,29 @@ def create_app():
         else:
             return render_template("login.html")
 
-    @app.route('/video_feed')
-    def video_feed():
-        def generate():
-            prev_time = time.time()
-            target_fps = 10  # Limit to 10 FPS
-            frame_interval = 1.0 / target_fps
-            main_camera_node = ros_controller.get_node("main_camera_subscriber")
-            while True:
-                current_time = time.time()
-                elapsed_time = current_time - prev_time
+    # This isn't currently used, instead we publish compressed images over websockets
+    # @app.route('/video_feed')
+    # def video_feed():
+    #     def generate():
+    #         prev_time = time.time()
+    #         target_fps = 10  # Limit to 10 FPS
+    #         frame_interval = 1.0 / target_fps
+    #         main_camera_node = ros_controller.get_node("main_camera_subscriber")
+    #         while True:
+    #             current_time = time.time()
+    #             elapsed_time = current_time - prev_time
 
-                if elapsed_time >= frame_interval:
-                    # Fetch and yield the frame
-                    cached_image = main_camera_node.get_cached_image()
-                    if cached_image:
-                        yield (b'--frame\r\n'
-                            b'Content-Type: image/jpeg\r\n\r\n' +
-                            cached_image.data + b'\r\n')
-                    prev_time = current_time
-                else:
-                    time.sleep(frame_interval - elapsed_time)
-        return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    #             if elapsed_time >= frame_interval:
+    #                 # Fetch and yield the frame
+    #                 cached_image = main_camera_node.get_cached_image()
+    #                 if cached_image:
+    #                     yield (b'--frame\r\n'
+    #                         b'Content-Type: image/jpeg\r\n\r\n' +
+    #                         cached_image.data + b'\r\n')
+    #                 prev_time = current_time
+    #             else:
+    #                 time.sleep(frame_interval - elapsed_time)
+    #     return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
         
     @socketio.on('command')
     def handle_command(data):
