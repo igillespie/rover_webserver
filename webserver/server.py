@@ -24,6 +24,8 @@ app = Flask(__name__, static_folder="static")
 ros_controller = None
 lock = threading.Lock()  # Ensure thread-safe access to cached images
 
+USERS = {"cockpit": "rover"}
+
 previous_image = None
 fps = 20  # Frames per second for image emiitter
 
@@ -51,10 +53,33 @@ def create_app():
     # Define routes
     @app.route("/")
     def home():
-        try:
-            return render_template("home.html")
-        except Exception as e:
-            return f"Error loading home page: {e}", 500
+        if is_logged_in():
+            try:
+                return render_template("home.html")
+            except Exception as e:
+                return f"Error loading home page: {e}", 500
+        else:
+            try:
+                return redirect("/login")
+            except Exception as e:
+                return f"Error loading login page: {e}", 500
+
+    
+    def is_logged_in():
+        return session.get("logged_in", False)
+        # return False
+
+    @app.route("/login", methods=["POST", "GET"])
+    def login():
+        if request.method == "POST":
+            username = request.form["username"]
+            password = request.form["password"]
+            if username in USERS and USERS[username] == password:
+                session["logged_in"] = True
+                return redirect("/")
+            return render_template("login.html", error="Invalid username or password")
+        else:
+            return render_template("login.html")
 
     @app.route('/video_feed')
     def video_feed():
@@ -130,6 +155,23 @@ def create_app():
                     mast.set_mast_pan_angle(150.0, 150.0) # Center it
                 else:
                     mast.set_mast_pan_tilt_angles_incremental(pan_angle, tilt_angle)
+
+            elif data.get('type') == 'direct_pan_angle':
+                mast = ros_controller.get_node("mast") if ros_controller else None
+                
+                # Convert pan_angle to float safely
+                pan_angle = data.get("pan_angle")
+                try:
+                    pan_angle = float(pan_angle) if pan_angle is not None else None
+                except ValueError:
+                    pan_angle = None
+                    print("Error: pan_angle is not a valid number.")
+                
+                if pan_angle is not None and mast is not None:
+                    mast.set_mast_pan_angle(pan_angle, mast.current_state.tilt_position)
+                else:
+                    print("Error: Could not set pan angle. Check values and try again.")
+
             elif data.get('type') == 'capture_img':
 
                 handle_image_capture()

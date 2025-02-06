@@ -172,6 +172,17 @@ document.addEventListener("DOMContentLoaded", function() {
     });
    
     // CAMERA MAST
+    document.getElementById('left90').addEventListener('click', function() {
+        
+        absoluteMastPanAngleMast(60.0); //90 degrees to left
+       
+    });
+    
+    document.getElementById('right90').addEventListener('click', function() {
+        
+        absoluteMastPanAngleMast(240.0); //90 degrees to left
+    });
+
     document.getElementById('leftMastPanButton').addEventListener('click', function() {
         
         coontrolMast(-10, 0);
@@ -200,6 +211,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function coontrolMast(pan, tilt) {
         socket.emit('command', { type: 'mast_control', pan_angle: pan, tilt_angle: tilt });
+    }
+
+    function absoluteMastPanAngleMast(pan) {
+        socket.emit('command', { type: 'direct_pan_angle', pan_angle: pan });
     }
 
     function formatSecondsToTime(seconds) {
