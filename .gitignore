@@ -79,3 +79,10 @@ ros_logs/
 .env
 .env.local
 .env.*.local
+._*
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+Thumbs.db
+
